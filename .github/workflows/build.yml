@@ -3,8 +3,10 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -27,6 +29,7 @@ jobs:
       - name: Rename APKs
         run: |
           V=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          echo "V=$V" >> $GITHUB_ENV
           mkdir -p out
           cp app/build/outputs/apk/debug/*.apk   out/SpectraLauncher-v$V-debug.apk
           cp app/build/outputs/apk/release/*.apk out/SpectraLauncher-v$V.apk
@@ -35,3 +38,24 @@ jobs:
         with:
           name: SpectraLauncher-apk
           path: out/*.apk
+
+      # Página de download fixa: github.com/<usuário>/<repo>/releases/latest
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$V"
+          gh release delete "$TAG" -y --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" out/*.apk --title "Spectra Launcher $V" \
+            --notes "Build automático de ${GITHUB_SHA::7}. Instale o SpectraLauncher-v$V.apk na TV." --latest
+
+      # Cópia dos APKs no branch 'builds' (histórico de 1 commit)
+      - name: Atualizar branch builds
+        run: |
+          cd out
+          git init -q -b builds
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add *.apk
+          git commit -qm "APK v$V (${GITHUB_SHA::7})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" builds
