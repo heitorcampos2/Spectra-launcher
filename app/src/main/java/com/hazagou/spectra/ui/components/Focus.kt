@@ -22,6 +22,10 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,7 +87,8 @@ fun FocusCard(
     val config = LocalConfiguration.current
     val density = LocalDensity.current
     var focused by remember { mutableStateOf(false) }
-    var longFired by remember { mutableStateOf(false) }
+    val press = remember { PressState() }
+    val scope = rememberCoroutineScope()
     val coords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val interaction = remember { MutableInteractionSource() }
     val scale by animateFloatAsState(
@@ -122,6 +127,7 @@ fun FocusCard(
             )
             .onFocusChanged { st ->
                 focused = st.isFocused
+                if (!st.isFocused) { press.down = false; press.job?.cancel() }
                 if (st.isFocused) {
                     onFocus?.invoke()
                     coords[0]?.takeIf { it.isAttached }?.let { c ->
@@ -155,16 +161,32 @@ fun FocusCard(
                         if (ev.type == KeyEventType.KeyDown) onAdjust(if (code == NativeKeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
                         true
                     }
+                    // Toque rápido no OK = abrir; segurar o OK (≥ 0,55 s) = opções.
+                    // Só reage a um aperto que COMEÇOU neste cartão: assim, ao soltar o OK depois de abrir
+                    // as opções, o "soltar" não aciona sem querer o primeiro item do menu.
                     isOk && ev.type == KeyEventType.KeyDown -> {
-                        if (ev.nativeKeyEvent.repeatCount > 0 && onLongClick != null && !longFired) {
-                            longFired = true
+                        val n = ev.nativeKeyEvent
+                        if (n.repeatCount == 0) {
+                            press.down = true
+                            press.longFired = false
+                            press.job?.cancel()
+                            if (onLongClick != null) press.job = scope.launch {
+                                delay(LONG_PRESS_MS)
+                                if (press.down && !press.longFired) { press.longFired = true; onLongClick() }
+                            }
+                        } else if (press.down && onLongClick != null && !press.longFired && n.eventTime - n.downTime >= LONG_PRESS_MS) {
+                            press.longFired = true
+                            press.job?.cancel()
                             onLongClick()
                         }
                         true
                     }
                     isOk && ev.type == KeyEventType.KeyUp -> {
-                        if (!longFired) onClick()
-                        longFired = false
+                        press.job?.cancel()
+                        val pressedHere = press.down
+                        press.down = false
+                        if (pressedHere && !press.longFired) onClick()
+                        press.longFired = false
                         true
                     }
                     else -> false
@@ -179,6 +201,14 @@ fun FocusCard(
     ) {
         content(focused)
     }
+}
+
+private const val LONG_PRESS_MS = 550L
+
+private class PressState {
+    var down = false
+    var longFired = false
+    var job: Job? = null
 }
 
 /** Botão em formato pílula (barra superior, diálogos, configurações). */

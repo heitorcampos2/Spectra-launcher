@@ -4,7 +4,9 @@ import android.content.Context
 import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -43,6 +45,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +86,22 @@ import kotlinx.coroutines.delay
 /** "Linha deslizante": o item focado fica sempre no início da fileira (estilo Projectivy). */
 private class PivotSpec(private val startPx: Float) : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - startPx
+}
+
+/** Abre a coluna de cabeçalhos à esquerda (← no primeiro cartão de uma fileira). */
+private val LocalRevealRail = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/** No primeiro cartão da fileira, ← mostra a coluna de configuração das seções. */
+@Composable
+private fun Modifier.revealRailOnLeft(enabled: Boolean = true): Modifier {
+    val reveal = LocalRevealRail.current
+    if (reveal == null || !enabled) return this
+    return onPreviewKeyEvent { ev ->
+        if (ev.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+            if (ev.type == KeyEventType.KeyDown) reveal()
+            true
+        } else false
+    }
 }
 
 /** Identificador de seção da fileira (para o painel lateral e os cabeçalhos à esquerda). */
@@ -134,16 +154,42 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
         runCatching { requester(r.key).requestFocus() }
     }
 
+    // Coluna de cabeçalhos: escondida; aparece com ← no primeiro cartão e some quando o foco sai dela.
+    var railVisible by remember { mutableStateOf(false) }
+    var railHadFocus by remember { mutableStateOf(false) }
+    val railFocus = remember { FocusRequester() }
+    LaunchedEffect(railVisible) {
+        if (railVisible) { delay(90); runCatching { railFocus.requestFocus() } } else railHadFocus = false
+    }
+    LaunchedEffect(settings.leftHeaders) { if (!settings.leftHeaders) railVisible = false }
+    BackHandler(enabled = railVisible) {
+        railVisible = false
+        vm.movingSection.value = null
+        focusedKey?.let { runCatching { requester(it).requestFocus() } }
+    }
+    val reveal: (() -> Unit)? = if (settings.leftHeaders && moving == null) ({ railVisible = true }) else null
+
     Row(Modifier.fillMaxSize()) {
-        if (settings.leftHeaders) {
-            HeaderRail(
-                rows = rows, focusedKey = focusedKey, movingSection = movingSection,
-                onJump = { jumpTo(it) },
-                onConfigure = { id -> vm.sectionPanel.value = id },
-                onMove = { id -> vm.movingSection.value = if (vm.movingSection.value == id) null else id },
-                onMoveDelta = { id, d -> vm.sectionsDo { move(id, d) } },
-            )
+        AnimatedVisibility(
+            visible = settings.leftHeaders && railVisible,
+            enter = fadeIn() + expandHorizontally(),
+            exit = fadeOut() + shrinkHorizontally()
+        ) {
+            Box(Modifier.onFocusChanged { st ->
+                if (st.hasFocus) railHadFocus = true
+                else if (railHadFocus) { railVisible = false; vm.movingSection.value = null }
+            }) {
+                HeaderRail(
+                    rows = rows, focusedKey = focusedKey, movingSection = movingSection,
+                    currentFocus = railFocus,
+                    onJump = { jumpTo(it) },
+                    onConfigure = { id -> vm.sectionPanel.value = id },
+                    onMove = { id -> vm.movingSection.value = if (vm.movingSection.value == id) null else id },
+                    onMoveDelta = { id, d -> vm.sectionsDo { move(id, d) } },
+                )
+            }
         }
+        CompositionLocalProvider(LocalRevealRail provides reveal) {
         Column(Modifier.weight(1f).fillMaxHeight()) {
             AnimatedVisibility(visible = showTop, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                 Box(Modifier.onFocusChanged { if (it.hasFocus) focusedRow = -1 }) { TopBar(vm, settings) }
@@ -200,6 +246,7 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
                 }
             }
         }
+        }
     }
 
     optionsFor?.let { (app, section) ->
@@ -241,6 +288,7 @@ private fun HeaderRail(
     rows: List<HomeRowModel>,
     focusedKey: String?,
     movingSection: String?,
+    currentFocus: FocusRequester,
     onJump: (Int) -> Unit,
     onConfigure: (String) -> Unit,
     onMove: (String) -> Unit,
@@ -250,6 +298,7 @@ private fun HeaderRail(
     val entries = rows.withIndex().filter { it.value is HomeRowModel.Items || it.value is HomeRowModel.Programs }
     val railState = rememberLazyListState()
     val current = entries.indexOfFirst { it.value.key == focusedKey }
+    val focusTarget = if (current >= 0) current else 0
     LaunchedEffect(current) { if (current >= 0) runCatching { railState.animateScrollToItem((current - 2).coerceAtLeast(0)) } }
     LazyColumn(
         state = railState,
@@ -258,7 +307,7 @@ private fun HeaderRail(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         horizontalAlignment = Alignment.End
     ) {
-        itemsIndexed(entries, key = { _, e -> "rail_" + e.value.key }) { _, e ->
+        itemsIndexed(entries, key = { _, e -> "rail_" + e.value.key }) { pos, e ->
             val isCur = e.value.key == focusedKey
             val secId = e.value.sectionId()
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
@@ -277,7 +326,8 @@ private fun HeaderRail(
                     Spacer(Modifier.width(6.dp))
                 }
                 val size = if (isCur) 40.dp else 28.dp
-                FocusCard(Modifier.size(size + 8.dp), corner = 10.dp, glow = false, focusScale = 1.15f,
+                FocusCard(Modifier.size(size + 8.dp).then(if (pos == focusTarget) Modifier.focusRequester(currentFocus) else Modifier),
+                    corner = 10.dp, glow = false, focusScale = 1.15f,
                     background = if (isCur) accent.copy(alpha = 0.22f) else Color.Transparent,
                     onClick = { onJump(e.index) }) { _ ->
                     Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (isCur) 1f else 0.55f }, contentAlignment = Alignment.Center) {
@@ -315,7 +365,7 @@ private fun ItemsRow(
     val sec = row.section
     @Composable
     fun Item(i: Int, item: HomeItem) {
-        Box(if (i == 0) Modifier.focusRequester(firstFocus) else Modifier) {
+        Box(if (i == 0) Modifier.focusRequester(firstFocus).revealRailOnLeft(enabled = moving == null) else Modifier) {
             when (item) {
                 is HomeItem.App -> {
                     val isMoving = moving?.sectionId == sec.id && moving.pkg == item.app.packageName
@@ -352,12 +402,16 @@ private fun ItemsRow(
         }
     }
     @Composable
-    fun AddCard() {
+    fun AddCardInner() {
         ActionCard(
             label = if (row.items.isEmpty()) "Adicionar apps" else "Adicionar", icon = "+",
             style = row.style, size = row.size, tint = Color.White.copy(alpha = 0.25f),
             onLongClick = onConfigure, onClick = onAdd
         )
+    }
+    @Composable
+    fun AddCard() {
+        Box(if (row.items.isEmpty()) Modifier.focusRequester(firstFocus).revealRailOnLeft() else Modifier) { AddCardInner() }
     }
     val showAdd = sec.type == SectionType.CUSTOM
     Column {
@@ -426,7 +480,7 @@ private fun ProgramsRow(
 
     @Composable
     fun Card(i: Int, p: TvProgram) {
-        Box(if (i == 0) Modifier.focusRequester(firstFocus) else Modifier) {
+        Box(if (i == 0) Modifier.focusRequester(firstFocus).revealRailOnLeft() else Modifier) {
             ProgramCard(
                 program = p, height = programH,
                 onFocus = { focusedProgram = p },

@@ -30,6 +30,15 @@ enum class WallpaperMotion(val label: String) {
     PARALLAX_DRIFT("Parallax + movimento")
 }
 
+/** Animação ao trocar de wallpaper (manual ou troca automática). */
+enum class WallTransition(val label: String) {
+    FADE("Esmaecer"),
+    ZOOM("Zoom suave"),
+    SLIDE("Deslizar"),
+    BLUR_ZOOM("Aproximar"),
+    NONE("Sem animação"),
+}
+
 enum class CardStyle(val label: String) { BANNER("Banner 16:9"), ICON("Ícone redondo"), POSTER("Pôster") }
 
 enum class PerformanceMode(val label: String) {
@@ -112,6 +121,7 @@ data class LauncherSettings(
     // ---- wallpaper
     val wallpaperPath: String? = null,
     val wallpaperMotion: WallpaperMotion = WallpaperMotion.PARALLAX_DRIFT,
+    val wallTransition: WallTransition = WallTransition.FADE,
     val parallaxStrength: Int = 2,
     val particles: Boolean = true,
     val dim: Float = 0.35f,
@@ -188,6 +198,7 @@ class SettingsRepository(private val context: Context) {
         val cardSpacing = intPreferencesKey("card_spacing")
         val wallpaperPath = stringPreferencesKey("wallpaper_path")
         val wallpaperMotion = stringPreferencesKey("wallpaper_motion")
+        val wallTransition = stringPreferencesKey("wall_transition")
         val parallaxStrength = intPreferencesKey("parallax_strength")
         val particles = booleanPreferencesKey("particles")
         val dim = floatPreferencesKey("dim")
@@ -261,6 +272,7 @@ class SettingsRepository(private val context: Context) {
             cardSpacing = p[K.cardSpacing] ?: d.cardSpacing,
             wallpaperPath = p[K.wallpaperPath],
             wallpaperMotion = p[K.wallpaperMotion].toEnum(d.wallpaperMotion),
+            wallTransition = p[K.wallTransition].toEnum(d.wallTransition),
             parallaxStrength = p[K.parallaxStrength] ?: d.parallaxStrength,
             particles = p[K.particles] ?: d.particles,
             dim = p[K.dim] ?: d.dim,
@@ -333,6 +345,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setCardSpacing(v: Int) = edit { it[K.cardSpacing] = v.coerceIn(6, 40) }
     suspend fun setWallpaperPath(v: String?) = edit { if (v == null) it.remove(K.wallpaperPath) else it[K.wallpaperPath] = v }
     suspend fun setWallpaperMotion(v: WallpaperMotion) = edit { it[K.wallpaperMotion] = v.name }
+    suspend fun setWallTransition(v: WallTransition) = edit { it[K.wallTransition] = v.name }
     suspend fun setParallaxStrength(v: Int) = edit { it[K.parallaxStrength] = v.coerceIn(1, 3) }
     suspend fun setParticles(v: Boolean) = edit { it[K.particles] = v }
     suspend fun setDim(v: Float) = edit { it[K.dim] = v.coerceIn(0f, 0.85f) }

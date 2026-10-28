@@ -59,6 +59,52 @@ shot 06-atualizacoes 8
 adb shell am start -W -n $PKG/com.hazagou.spectra.remote.RemoteActivity
 shot 07-controle-celular 6
 
+# Wallpapers › Classificação
+adb shell am start -W -n $ACT --es open wallpaper
+sleep 3
+adb shell input keyevent KEYCODE_DPAD_RIGHT
+adb shell input keyevent KEYCODE_DPAD_CENTER
+shot 08-wallpapers-classificacao 10
+
+# Cabeçalhos: ← no primeiro cartão mostra a coluna
+adb shell input keyevent KEYCODE_HOME
+adb shell am start -W -n $ACT
+sleep 3
+adb shell input keyevent KEYCODE_DPAD_LEFT
+shot 09-cabecalhos-visiveis 2
+adb shell input keyevent KEYCODE_DPAD_RIGHT
+shot 10-cabecalhos-ocultos 2
+
+# Controle completo (ADB local) em OUTRO app: Configurações do Android
+{
+  echo "== props"; adb shell getprop ro.adb.secure; adb shell getprop service.adb.tcp.port; adb shell getprop ro.build.type
+} >> shots/servidor.txt 2>&1
+adb tcpip 5555 >> shots/servidor.txt 2>&1
+sleep 6
+adb wait-for-device
+adb shell am force-stop $PKG
+echo "<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><boolean name=\"enabled\" value=\"true\" /></map>" > /tmp/adb.xml
+adb push /tmp/adb.xml /data/local/tmp/adb.xml
+adb shell "cat /data/local/tmp/adb.xml | run-as $PKG sh -c 'cat > shared_prefs/spectra_adb.xml'"
+adb shell am start -W -n $ACT
+sleep 6
+shot 11-autorizacao-adb 1
+# tenta aceitar o diálogo "Permitir depuração" (marca "sempre permitir" e confirma)
+adb shell input keyevent KEYCODE_DPAD_DOWN; adb shell input keyevent KEYCODE_DPAD_CENTER
+adb shell input keyevent KEYCODE_TAB; adb shell input keyevent KEYCODE_DPAD_RIGHT; adb shell input keyevent KEYCODE_DPAD_CENTER
+sleep 4
+adb forward tcp:8642 tcp:8642
+adb shell am start -W -a android.settings.SETTINGS
+sleep 4
+shot 12-config-android-antes 1
+{
+  echo "== info (outro app)"; curl -s -m 5 http://127.0.0.1:8642/api/info; echo
+  T=$(curl -s -m 5 -X POST -d '{"pin":"1234"}' http://127.0.0.1:8642/api/pair | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+  for k in down down down; do echo "== key $k (outro app)"; curl -s -m 8 -X POST -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/key?k=$k"; echo; sleep 1; done
+} >> shots/servidor.txt 2>&1
+shot 13-config-android-depois 2
+adb logcat -d | grep -E "SpectraAdb" > shots/adb.txt || true
+
 adb logcat -d -b crash > shots/crash.txt
 adb logcat -d | grep -E "AndroidRuntime|FATAL|SpectraRemote" > shots/erros.txt || true
 exit 0

@@ -113,6 +113,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
         when (intent?.getStringExtra(EXTRA_OPEN)) {
             "remote" -> vm.remotePairOpen.value = true
             "updates" -> vm.openSettings("UPDATES")
+            "wallpaper" -> vm.open(Screen.WALLPAPER)
         }
     }
 

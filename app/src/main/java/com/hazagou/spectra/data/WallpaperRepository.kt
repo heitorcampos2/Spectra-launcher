@@ -26,7 +26,27 @@ data class WallpaperItem(
 
 data class WallCategory(val id: String, val label: String, val emoji: String, val query: String?)
 
-enum class WallSource(val label: String) { CATEGORIES("Categorias"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers") }
+enum class WallSource(val label: String) {
+    CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers")
+}
+
+/** Classificação dos wallpapers (acervo público Wallhaven, só conteúdo seguro, proporção de TV). */
+enum class WallRank(val label: String, val emoji: String, val sorting: String, val topRange: String? = null) {
+    TOP_WEEK("Top da semana", "🏆", "toplist", "1w"),
+    TOP_MONTH("Top do mês", "🥇", "toplist", "1M"),
+    TOP_YEAR("Top do ano", "👑", "toplist", "1y"),
+    FAVORITES("Mais favoritados", "❤️", "favorites"),
+    VIEWS("Mais vistos", "👁", "views"),
+    NEW("Recentes", "🆕", "date_added"),
+    RANDOM("Surpresa", "🎲", "random"),
+}
+
+/** Resolução mínima. */
+enum class WallRes(val label: String, val atleast: String) {
+    FHD("Full HD+", "1920x1080"),
+    QHD("2K+", "2560x1440"),
+    UHD("4K", "3840x2160"),
+}
 
 class WallpaperRepository(private val context: Context) {
 
@@ -49,6 +69,13 @@ class WallpaperRepository(private val context: Context) {
             WallCategory("abstract", "Abstrato", "🌀", "abstract"),
             WallCategory("movies", "Filmes", "🎬", "movies"),
             WallCategory("city", "Cidades", "🏙️", "city night"),
+            WallCategory("ocean", "Oceano", "🌊", "ocean"),
+            WallCategory("mountains", "Montanhas", "🏔️", "mountains"),
+            WallCategory("aurora", "Aurora", "🌠", "aurora"),
+            WallCategory("synthwave", "Retrô / Synthwave", "🌇", "synthwave"),
+            WallCategory("rain", "Chuva / Aconchego", "🌧️", "rain"),
+            WallCategory("flowers", "Flores", "🌺", "flowers"),
+            WallCategory("digital", "Arte digital", "🎨", "digital art"),
         )
     }
 
@@ -64,6 +91,21 @@ class WallpaperRepository(private val context: Context) {
         val url = if (cat.query == null) "$base&sorting=toplist&topRange=1M"
         else "$base&sorting=relevance&q=${enc(cat.query)}"
         parseWallhaven(httpGet(url))
+    }
+
+    private var randomSeed = java.util.UUID.randomUUID().toString().take(6).filter { it.isLetterOrDigit() }
+
+    /** Wallpapers por classificação: top/favoritos/vistos/recentes/aleatório, resolução mínima e tema opcional. */
+    suspend fun ranked(rank: WallRank, res: WallRes, theme: WallCategory?, page: Int = 1): List<WallpaperItem> = withContext(Dispatchers.IO) {
+        if (rank == WallRank.RANDOM && page == 1) randomSeed = java.util.UUID.randomUUID().toString().filter { it.isLetterOrDigit() }.take(6)
+        val sb = StringBuilder("https://wallhaven.cc/api/v1/search?categories=111&purity=100&ratios=16x9,16x10,21x9")
+            .append("&atleast=").append(res.atleast)
+            .append("&sorting=").append(rank.sorting)
+            .append("&order=desc&page=").append(page)
+        rank.topRange?.let { sb.append("&topRange=").append(it) }
+        if (rank == WallRank.RANDOM) sb.append("&seed=").append(randomSeed)
+        theme?.query?.let { sb.append("&q=").append(enc(it)) }
+        parseWallhaven(httpGet(sb.toString()))
     }
 
     suspend fun searchWallhaven(query: String, page: Int = 1): List<WallpaperItem> = withContext(Dispatchers.IO) {

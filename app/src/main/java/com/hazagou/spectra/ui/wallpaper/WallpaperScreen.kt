@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -101,6 +102,9 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
 
     var source by remember { mutableStateOf(WallSource.CATEGORIES) }
     var category by remember { mutableStateOf(WallpaperRepository.CATEGORIES.first()) }
+    var rank by remember { mutableStateOf(com.hazagou.spectra.data.WallRank.TOP_MONTH) }
+    var res by remember { mutableStateOf(com.hazagou.spectra.data.WallRes.FHD) }
+    var theme by remember { mutableStateOf<WallCategory?>(null) }
     var query by remember { mutableStateOf("") }
     var onlyHq by remember { mutableStateOf(true) }
     val results = remember { mutableStateListOf<WallpaperItem>() }
@@ -120,11 +124,13 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
         if (reset) { results.clear(); page = 0 }
         loading = true; error = null
         val src = source; val cat = category; val q = query; val hq = onlyHq; val pg = page
+        val rk = rank; val rs = res; val th = theme
         jobHolder[0] = scope.launch {
             val me = coroutineContext[Job]
             try {
                 val list = when (src) {
                     WallSource.CATEGORIES -> repo.byCategory(cat, pg + 1)
+                    WallSource.RANKED -> repo.ranked(rk, rs, th, pg + 1)
                     WallSource.GOOGLE -> repo.searchGoogle(q, pg, settings.googleApiKey, settings.googleCx, hq)
                     WallSource.SAVED -> emptyList()
                 }
@@ -168,8 +174,8 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
         }
     }
 
-    LaunchedEffect(source, category) {
-        if (source == WallSource.CATEGORIES) load(true)
+    LaunchedEffect(source, category, rank, res, theme) {
+        if (source == WallSource.CATEGORIES || source == WallSource.RANKED) load(true)
         if (source == WallSource.SAVED) savedFiles = repo.saved()
     }
     LaunchedEffect(Unit) { delay(80); runCatching { firstTab.requestFocus() } }
@@ -184,16 +190,16 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
             Row(Modifier.padding(horizontal = 56.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Wallpapers", style = MaterialTheme.typography.displaySmall, color = Color.White)
                 Spacer(Modifier.width(24.dp))
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.weight(1f).horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     WallSource.entries.forEachIndexed { i, s ->
                         PillButton(
                             s.label,
                             modifier = if (i == 0) Modifier.focusRequester(firstTab) else Modifier,
-                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾" },
+                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.RANKED -> "🏆"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾" },
                             selected = source == s
                         ) { source = s; webMode = false; if (s == WallSource.GOOGLE) { results.clear(); error = null } }
                     }
-                    PillButton("Arquivo/pendrive (foto, GIF, vídeo)", leading = "📁") {
+                    PillButton("Arquivo / pendrive", leading = "📁") {
                         runCatching { pickFile.launch(arrayOf("image/*", "video/*")) }.onFailure { toast(context, "Seletor de arquivos indisponível nesta TV") }
                     }
                     PillButton("Arte padrão", leading = "✦") {
@@ -213,6 +219,31 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                     ) {
                         items(WallpaperRepository.CATEGORIES, key = { it.id }) { c: WallCategory ->
                             PillButton(c.label, leading = c.emoji, selected = c == category) { category = c }
+                        }
+                    }
+                }
+                WallSource.RANKED -> {
+                    LazyRow(
+                        Modifier.fillMaxWidth().focusRestorer(),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 16.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(com.hazagou.spectra.data.WallRank.entries.toList(), key = { "r_" + it.name }) { r ->
+                            PillButton(r.label, leading = r.emoji, selected = r == rank) { rank = r }
+                        }
+                        item(key = "sep") { Spacer(Modifier.width(18.dp)) }
+                        items(com.hazagou.spectra.data.WallRes.entries.toList(), key = { "res_" + it.name }) { r ->
+                            PillButton(r.label, leading = "▣", selected = r == res) { res = r }
+                        }
+                    }
+                    LazyRow(
+                        Modifier.fillMaxWidth().focusRestorer(),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 4.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item(key = "all") { PillButton("Todos os temas", leading = "✦", selected = theme == null) { theme = null } }
+                        items(WallpaperRepository.CATEGORIES.filter { it.query != null }, key = { "t_" + it.id }) { c ->
+                            PillButton(c.label, leading = c.emoji, selected = c == theme) { theme = c }
                         }
                     }
                 }

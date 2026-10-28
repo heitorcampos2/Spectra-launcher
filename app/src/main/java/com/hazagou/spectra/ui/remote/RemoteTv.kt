@@ -112,8 +112,9 @@ fun RemotePairDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                     System.currentTimeMillis() - last < 60_000 -> "✔ Celular conectado"
                     else -> "Aguardando celular"
                 })
-                if (!vm.homeOverrideEnabled()) Text(
-                    "Para controlar também YouTube, Netflix etc., ative \"Spectra — Botão Home e controle\" em Acessibilidade.",
+                val adbSt by com.hazagou.spectra.remote.AdbLocal.status.collectAsState()
+                if (adbSt != com.hazagou.spectra.remote.AdbLocal.Status.CONNECTED) Text(
+                    "Para o celular funcionar em todo o sistema (YouTube, Netflix, menus), ative Configurações › Controle remoto › Controle completo do sistema.",
                     color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(6.dp))

@@ -1,6 +1,16 @@
 package com.hazagou.spectra.ui.components
 
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateOffsetAsState
@@ -17,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -35,6 +47,7 @@ import coil.size.Precision
 import com.hazagou.spectra.data.LauncherSettings
 import com.hazagou.spectra.data.PerformanceMode
 import com.hazagou.spectra.data.WallpaperMotion
+import com.hazagou.spectra.data.WallTransition
 import com.hazagou.spectra.ui.theme.Spectra
 import java.io.File
 import kotlin.math.PI
@@ -110,17 +123,39 @@ fun WallpaperBackground(
             VideoWallpaper(file, settings.videoVolume, Modifier.fillMaxSize())
         } else if (file != null) {
             val hq = settings.performance == PerformanceMode.MAX_QUALITY
-            val request = remember(file.path, file.lastModified(), settings.softBlur, hq) {
-                ImageRequest.Builder(context)
-                    .data(file)
-                    .apply {
-                        if (settings.softBlur) size(240, 135) else size(if (hq) 3840 else 1920, if (hq) 2160 else 1080)
-                    }
-                    .precision(Precision.INEXACT)
-                    .crossfade(if (animations) 600 else 0)
-                    .build()
+            val blur = settings.softBlur
+            fun request(f: File) = ImageRequest.Builder(context)
+                .data(f)
+                .apply { if (blur) size(240, 135) else size(if (hq) 3840 else 1920, if (hq) 2160 else 1080) }
+                .precision(Precision.INEXACT)
+                .memoryCacheKey("wall:${f.path}:${f.lastModified()}:$blur:$hq")
+                .build()
+            // Pré-carrega o próximo wallpaper e só então troca, com a animação escolhida (sem "piscar" escuro)
+            var shown by remember { mutableStateOf(file) }
+            LaunchedEffect(file.path, file.lastModified(), blur, hq) {
+                runCatching { context.imageLoader.execute(request(file)) }
+                shown = file
             }
-            AsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = layerMod)
+            val style = if (animations) settings.wallTransition else WallTransition.NONE
+            AnimatedContent(
+                targetState = shown,
+                modifier = layerMod,
+                transitionSpec = {
+                    when (style) {
+                        WallTransition.FADE -> fadeIn(tween(1100)) togetherWith fadeOut(tween(1100))
+                        WallTransition.ZOOM -> (fadeIn(tween(1000)) + scaleIn(tween(1400), initialScale = 1.12f)) togetherWith fadeOut(tween(1000))
+                        WallTransition.SLIDE -> (slideInHorizontally(tween(1000)) { it } + fadeIn(tween(600))) togetherWith
+                            (slideOutHorizontally(tween(1000)) { -it / 3 } + fadeOut(tween(1000)))
+                        WallTransition.BLUR_ZOOM -> (fadeIn(tween(900)) + scaleIn(tween(1100), initialScale = 0.88f)) togetherWith
+                            (fadeOut(tween(900)) + scaleOut(tween(1100), targetScale = 1.18f))
+                        WallTransition.NONE -> EnterTransition.None togetherWith ExitTransition.None
+                    }
+                },
+                label = "wallpaperTransition"
+            ) { f ->
+                val req = remember(f.path, f.lastModified(), blur, hq) { request(f) }
+                AsyncImage(model = req, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
         } else when (settings.bgMode) {
             com.hazagou.spectra.data.BgMode.SOLID -> Box(Modifier.fillMaxSize().background(Color(settings.bgColor1)))
             com.hazagou.spectra.data.BgMode.GRADIENT -> Box(

@@ -26,9 +26,9 @@ data class CommandResult(val ok: Boolean, val message: String? = null) {
 object RemoteCommands {
 
     private val main = Handler(Looper.getMainLooper())
-    private const val NEED_A11Y = "Para controlar outros apps, ative \"Spectra — Botão Home e controle\" em Acessibilidade na TV."
+    private const val NEED_A11Y = "Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."
 
-    fun canControlOtherApps(): Boolean = HomeOverrideService.instance != null
+    fun canControlOtherApps(): Boolean = AdbLocal.isConnected || HomeOverrideService.instance != null
 
     fun key(ctx: Context, k: String): CommandResult {
         val audio = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -58,11 +58,14 @@ object RemoteCommands {
         }
 
         val svc = HomeOverrideService.instance
+        val adb = AdbLocal.isConnected || AdbLocal.enabled
         if (k == "home") {
+            if (adb && AdbLocal.key(KeyEvent.KEYCODE_HOME)) return CommandResult(true)
             if (svc != null && svc.remoteGlobal("home")) return CommandResult(true)
             return startActivity(ctx, Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_FROM_HOME_OVERRIDE, true))
         }
         if (k == "settings") {
+            if (adb && AdbLocal.key(KeyEvent.KEYCODE_SETTINGS)) return CommandResult(true)
             return startActivity(ctx, Intent(android.provider.Settings.ACTION_SETTINGS))
         }
 
@@ -71,7 +74,9 @@ object RemoteCommands {
             if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true)
             if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true)
         }
-        // 2) outro app → acessibilidade
+        // 2) outro app → teclas reais pela depuração local (funciona em todo o sistema)
+        if (adb && AdbLocal.key(code, long = k == "oklong")) return CommandResult(true)
+        // 3) sem ADB → acessibilidade (Android 13+ tem D-pad nativo; antes disso, foco pelos elementos da tela)
         if (svc == null) return CommandResult(false, NEED_A11Y)
         val ok = when (k) {
             "back" -> svc.remoteGlobal("back")
@@ -82,6 +87,7 @@ object RemoteCommands {
     }
 
     fun text(ctx: Context, text: String): CommandResult {
+        if ((AdbLocal.isConnected || AdbLocal.enabled) && AdbLocal.text(text)) return CommandResult(true)
         val svc = HomeOverrideService.instance ?: return CommandResult(false, NEED_A11Y)
         return if (svc.remoteText(text)) CommandResult(true)
         else CommandResult(false, "Nenhum campo de texto selecionado na TV. Abra a busca do app e tente de novo.")
