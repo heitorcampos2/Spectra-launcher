@@ -1,0 +1,31 @@
+10-28 09:50:03.291  2429  2457 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:03.293  2429  2457 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:13.000  2475  2475 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 0 <<<<<<
+10-28 09:50:13.001  2475  2475 I AndroidRuntime: Using default boot image
+10-28 09:50:13.001  2475  2475 I AndroidRuntime: Leaving lock profiling enabled
+10-28 09:50:13.057  2475  2475 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-28 09:50:14.085  2475  2475 D AndroidRuntime: Shutting down VM
+10-28 09:50:25.257  2541  2541 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 0 <<<<<<
+10-28 09:50:25.258  2541  2541 I AndroidRuntime: Using default boot image
+10-28 09:50:25.258  2541  2541 I AndroidRuntime: Leaving lock profiling enabled
+10-28 09:50:25.303  2541  2541 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-28 09:50:26.325  2541  2541 D AndroidRuntime: Shutting down VM
+10-28 09:50:27.833  2429  2564 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:27.834  2429  2564 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:28.849  2429  2565 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:28.849  2429  2565 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:29.864  2429  2493 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:29.865  2429  2493 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:30.879  2429  2494 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:30.880  2429  2494 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:37.050  2429  2564 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:37.051  2429  2564 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:37.062  2429  2565 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:37.062  2429  2565 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).
+10-28 09:50:39.109  2599  2599 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 0 <<<<<<
+10-28 09:50:39.110  2599  2599 I AndroidRuntime: Using default boot image
+10-28 09:50:39.110  2599  2599 I AndroidRuntime: Leaving lock profiling enabled
+10-28 09:50:39.155  2599  2599 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-28 09:50:40.176  2599  2599 D AndroidRuntime: Shutting down VM
+10-28 09:50:41.691  2429  2493 I SpectraAdb: conectando ao adbd local…
+10-28 09:50:41.692  2429  2493 W SpectraAdb: falha: UNAVAILABLE — Depuração desligada na TV (porta 5555 fechada).

@@ -1,0 +1,14 @@
+secure=0 type=userdebug
+porta5555: 0
+taps: 
+info: {"app":"Spectra Launcher","version":"3.1.7-debug","name":"Unknown Android SDK built for x86_64","port":8642,"controlsOtherApps":false,"systemControl":"UNAVAILABLE","systemControlError":"Depuração desligada na TV (porta 5555 fechada)."}
+key down: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+key down: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+key down: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+key back: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+pkg em foco depois do voltar:   mCurrentFocus=Window{8e34f39 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
+key down: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+key down: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
+foco antes: focused="true" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,24][320,640]"
+foco depois: focused="true" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,24][320,640]"
+texto: {"ok":false,"message":"Para controlar outros apps, ative o \"Controle completo do sistema\" na TV: MENU ☰ › Controle remoto."}
