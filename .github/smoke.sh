@@ -94,6 +94,34 @@ shot 16-editar-canais 4
 } > shots/canais.txt 2>&1
 adb logcat -d | grep -E "SpectraTv|TestPublisher" > shots/canais-log.txt || true
 
+# Cenário da TV real: canais concedido, listagens NEGADA → o Spectra precisa pedir
+adb shell pm revoke $PKG android.permission.READ_TV_LISTINGS
+adb shell dumpsys package $PKG | grep -iE "TV_LISTINGS" > shots/listagens.txt
+adb shell am force-stop $PKG
+adb logcat -c
+adb shell am start -W -n $ACT
+sleep 4
+adb shell input keyevent KEYCODE_BACK   # "Definir como padrão?" → Agora não (dispara o pedido de permissão)
+sleep 4
+shot 17-pedido-permissao 1
+adb shell uiautomator dump /sdcard/p.xml >/dev/null 2>&1; adb shell cat /sdcard/p.xml > shots/permissao-ui.xml
+python3 - <<'PY' > /tmp/allow.txt
+import re
+x=open('shots/permissao-ui.xml',encoding='utf-8',errors='ignore').read()
+for n in re.findall(r'<node [^>]*>', x):
+    if re.search(r'permission_allow_button|text="(Allow|Permitir)"', n):
+        b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+        if b:
+            a,c,d,e=map(int,b.groups()); print((a+d)//2,(c+e)//2); break
+PY
+cat /tmp/allow.txt >> shots/listagens.txt
+if [ -s /tmp/allow.txt ]; then read X Y < /tmp/allow.txt; adb shell input tap $X $Y; else adb shell input keyevent KEYCODE_DPAD_CENTER; fi
+sleep 3
+adb shell dumpsys package $PKG | grep -iE "TV_LISTINGS" >> shots/listagens.txt
+adb shell am start -W -n $ACT --es open channels
+shot 18-canais-apos-permitir 6
+adb logcat -d | grep -E "SpectraTv" | tail -3 >> shots/listagens.txt
+
 adb logcat -d -b crash > shots/crash.txt
 adb logcat -d | grep -E "AndroidRuntime|FATAL|SpectraRemote" > shots/erros.txt || true
 exit 0
