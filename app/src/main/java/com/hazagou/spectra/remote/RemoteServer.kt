@@ -157,8 +157,6 @@ object RemoteServer {
         .put("app", "Spectra Launcher").put("version", BuildConfig.VERSION_NAME)
         .put("name", c.tvName).put("port", port)
         .put("controlsOtherApps", RemoteCommands.canControlOtherApps())
-        .put("systemControl", AdbLocal.status.value.name)
-        .apply { AdbLocal.lastError.value?.let { put("systemControlError", it) } }
 
     private fun pair(out: OutputStream, req: Request, c: RemoteConfig) {
         val now = SystemClock.elapsedRealtime()

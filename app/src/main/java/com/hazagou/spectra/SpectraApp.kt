@@ -50,7 +50,6 @@ class SpectraApp : Application(), ImageLoaderFactory {
         system = SystemRepository(this)
         remote = RemoteStore(this)
         updates = UpdateManager(this)
-        com.hazagou.spectra.remote.AdbLocal.init(this)
         // Servidor do controle remoto: liga/desliga sozinho conforme a configuração (PIN + ativado)
         appScope.launch { remote.config.collect { RemoteServer.sync(this@SpectraApp, remote) } }
     }

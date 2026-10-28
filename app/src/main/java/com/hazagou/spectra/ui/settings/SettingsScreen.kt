@@ -253,8 +253,6 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
     val remoteCfg by vm.remote.config.collectAsState()
     val remoteRunning by com.hazagou.spectra.remote.RemoteServer.running.collectAsState()
     val autoUpdate by vm.updates.autoCheck.collectAsState()
-    val adbStatus by com.hazagou.spectra.remote.AdbLocal.status.collectAsState()
-    val adbError by com.hazagou.spectra.remote.AdbLocal.lastError.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
@@ -565,44 +563,9 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                     if (remoteCfg.pin.isBlank()) dialog = "pin" else { vm.remote.setEnabled(true); vm.remotePairOpen.value = true }
                 } }
                 item { SettingRow("Nome desta TV", remoteCfg.tvName, "Aparece no celular") { dialog = "tvName" } }
-                item { Group("Controle em todo o sistema") }
                 item {
-                    SettingRow("Controle completo do sistema", when (adbStatus) {
-                            com.hazagou.spectra.remote.AdbLocal.Status.CONNECTED -> "✔ Ativo"
-                            com.hazagou.spectra.remote.AdbLocal.Status.CONNECTING -> "Conectando…"
-                            com.hazagou.spectra.remote.AdbLocal.Status.WAITING_AUTH -> "Aceite na TV ›"
-                            else -> "Ativar ›"
-                        },
-                        "Recomendado. O celular funciona em qualquer app e nos menus do Android, igual ao controle físico") {
-                        if (adbStatus == com.hazagou.spectra.remote.AdbLocal.Status.CONNECTED) {
-                            dialog = "adbOff"
-                        } else {
-                            toast(ctx, "Conectando… se aparecer \"Permitir depuração?\", marque \"Sempre permitir\" e OK")
-                            Thread { com.hazagou.spectra.remote.AdbLocal.enableAndConnect() }.start()
-                        }
-                    }
-                }
-                if (adbStatus == com.hazagou.spectra.remote.AdbLocal.Status.UNAVAILABLE || adbStatus == com.hazagou.spectra.remote.AdbLocal.Status.WAITING_AUTH) item {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Spectra.Surface).padding(16.dp)) {
-                        Text("Como ativar (uma vez só):", color = Color.White, style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.height(6.dp))
-                        listOf(
-                            "1. Configurações do Android › Preferências do dispositivo › Sobre",
-                            "2. Clique 7 vezes em \"Build\" até aparecer \"Você é um desenvolvedor\"",
-                            "3. Volte › Opções do desenvolvedor › ligue \"Depuração USB\" (e \"Depuração de rede/ADB\", se existir)",
-                            "4. Volte aqui e toque em \"Controle completo do sistema\"",
-                            "5. Na TV: marque \"Sempre permitir deste computador\" e OK",
-                        ).forEach { Text(it, color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 2.dp)) }
-                        adbError?.let { Text(it, color = Color(0xFFFCA5A5), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
-                    }
-                }
-                item { SettingRow("Abrir opções do desenvolvedor", "›") {
-                    runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        .onFailure { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-                } }
-                item {
-                    SettingRow("Alternativa: acessibilidade", if (actions.isHomeOverrideEnabled()) "✔ Ativo" else "Ativar ›",
-                        "\"Spectra — Botão Home e controle\". Funciona em parte dos apps; use se não puder ligar a depuração") { actions.openAccessibilitySettings() }
+                    SettingRow("Controlar outros apps", if (actions.isHomeOverrideEnabled()) "✔ Ativo" else "Ativar ›",
+                        "Acessibilidade \"Spectra — Botão Home e controle\": mover a seleção, OK, voltar e digitar em outros apps") { actions.openAccessibilitySettings() }
                 }
                 item { SettingRow("Desconectar todos os celulares", "⟲", "Gera um novo código; será preciso escanear de novo") {
                     vm.remote.disconnectAll(); toast(ctx, "Celulares desconectados")
@@ -658,15 +621,6 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
         "pin" -> TextEditDialog("PIN do controle remoto (4 a 8 números)", "", onSave = { p ->
             if (com.hazagou.spectra.ui.remote.applyPin(vm, ctx, p)) vm.remotePairOpen.value = true
         }, onDismiss = { dialog = null })
-        "adbOff" -> com.hazagou.spectra.ui.components.SpectraDialog({ dialog = null }) {
-            val f = com.hazagou.spectra.ui.components.rememberAutoFocus()
-            Text("Desligar o controle completo?", color = Color.White, style = MaterialTheme.typography.titleLarge)
-            Text("O celular volta a controlar só o Spectra (e os apps, se a acessibilidade estiver ativa).", color = Spectra.TextSecondary)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton("Manter ligado", selected = true, modifier = Modifier.focusRequester(f)) { dialog = null }
-                PillButton("Desligar") { com.hazagou.spectra.remote.AdbLocal.disable(); dialog = null }
-            }
-        }
         "tvName" -> TextEditDialog("Nome desta TV", remoteCfg.tvName, onSave = { t -> vm.remote.setTvName(t.trim().take(30)) }, onDismiss = { dialog = null })
         "emoji" -> EmojiPickerDialog(EMOJIS, s.titleEmoji, onPick = { e -> vm.launch { setTitleEmoji(e) } }, onDismiss = { dialog = null })
         "accent" -> com.hazagou.spectra.ui.components.ColorPickerDialog(
