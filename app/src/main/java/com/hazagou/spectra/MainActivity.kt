@@ -115,6 +115,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
             "updates" -> vm.openSettings("UPDATES")
             "wallpaper" -> vm.open(Screen.WALLPAPER)
             "home" -> vm.goHome()
+            "channels" -> { vm.goHome(); vm.channelsOpen.value = true }
         }
     }
 

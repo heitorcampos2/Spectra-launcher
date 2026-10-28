@@ -24,7 +24,7 @@ jobs:
       - name: Build debug + release
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug assembleRelease
+          ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease :testpublisher:assembleDebug
 
       - name: Prepare APKs
         run: |
@@ -38,6 +38,11 @@ jobs:
         with:
           name: SpectraLauncher-apk
           path: out/*.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testpublisher-apk
+          path: testpublisher/build/outputs/apk/debug/*.apk
 
       # Página de download fixa:
       #   https://github.com/<usuário>/<repo>/releases/latest/download/SpectraLauncher.apk
@@ -75,6 +80,10 @@ jobs:
         with:
           name: SpectraLauncher-apk
           path: apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: testpublisher-apk
+          path: apk/publisher
       - name: Habilitar KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

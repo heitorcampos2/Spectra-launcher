@@ -208,6 +208,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         .take(s.maxProgramsPerRow)
                     if (list.isNotEmpty()) rows += HomeRowModel.Programs("wn_${sec.id}", sec.title, sec.icon, null, list, null, sec)
                 }
+                SectionType.SUGGESTIONS -> {
+                    val ready = tv as? TvContentRepository.State.Ready
+                    // intercala os apps (1 de cada por vez) para a fileira ficar variada
+                    val perApp = ready?.byPackage.orEmpty().values
+                        .filter { it.packageName !in s.hidden && it.packageName !in sec.excluded }
+                        .map { it.recommended }.filter { it.isNotEmpty() }
+                    val mixed = ArrayList<com.hazagou.spectra.data.TvProgram>()
+                    var i = 0
+                    while (mixed.size < s.maxProgramsPerRow && perApp.any { it.size > i }) {
+                        perApp.forEach { l -> if (i < l.size) mixed += l[i] }
+                        i++
+                    }
+                    val list = mixed.distinctBy { it.title + it.imageUri }.take(s.maxProgramsPerRow)
+                        .let { if (sec.sort == "az") it.sortedBy { p -> p.title.lowercase() } else it }
+                    if (list.isNotEmpty()) rows += HomeRowModel.Programs("sg_${sec.id}", sec.title, sec.icon, null, list, null, sec)
+                }
+                SectionType.SUBSCRIPTIONS -> {
+                    val subs = Regex("inscri|subscri|seguindo|following", RegexOption.IGNORE_CASE)
+                    val list = (tv as? TvContentRepository.State.Ready)?.channels.orEmpty()
+                        .filter { subs.containsMatchIn(it.name) && it.packageName !in s.hidden && it.packageName !in sec.excluded }
+                        .flatMap { it.programs }
+                        .let { if (sec.sort == "az") it.sortedBy { p -> p.title.lowercase() } else it }
+                        .take(s.maxProgramsPerRow)
+                    if (list.isNotEmpty()) rows += HomeRowModel.Programs("sb_${sec.id}", sec.title, sec.icon, null, list, null, sec)
+                }
                 SectionType.CHANNEL -> {
                     val ch = (tv as? TvContentRepository.State.Ready)?.channels.orEmpty()
                         .firstOrNull { it.packageName == sec.channelPackage && it.name == sec.channelName }

@@ -74,6 +74,25 @@ shot 09-cabecalhos-visiveis 2
 adb shell input keyevent KEYCODE_DPAD_RIGHT
 shot 10-cabecalhos-ocultos 2
 
+# Canais: um app de teste publica canais/programas/ver a seguir (como o Sintonia) e o Spectra precisa mostrá-los
+adb install -r apk/publisher/*.apk >> shots/install.txt 2>&1
+adb shell am start -W -n com.hazagou.spectra.testpublisher/.PublishActivity
+sleep 6
+adb shell am force-stop $PKG
+adb shell am start -W -n $ACT --es open home
+sleep 10
+shot 14-inicio-com-canais 1
+adb shell input keyevent KEYCODE_DPAD_DOWN; sleep 1; adb shell input keyevent KEYCODE_DPAD_DOWN
+shot 15-inicio-rolado 2
+adb shell am start -W -n $ACT --es open channels
+shot 16-editar-canais 4
+{
+  echo "== canais vistos pelo shell"; adb shell content query --uri content://android.media.tv/channel --projection _id:package_name:display_name:browsable:searchable
+  echo "== ver a seguir (shell)"; adb shell content query --uri content://android.media.tv/watch_next_program --projection _id:package_name:title
+  echo "== permissões do Spectra"; adb shell dumpsys package $PKG | grep -iE "EPG|TV_LISTINGS"
+} > shots/canais.txt 2>&1
+adb logcat -d | grep -E "SpectraTv|TestPublisher" > shots/canais-log.txt || true
+
 adb logcat -d -b crash > shots/crash.txt
 adb logcat -d | grep -E "AndroidRuntime|FATAL|SpectraRemote" > shots/erros.txt || true
 exit 0

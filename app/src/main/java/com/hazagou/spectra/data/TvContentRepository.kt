@@ -69,6 +69,28 @@ class TvContentRepository(private val context: Context) {
         ) : State
     }
 
+    /** Diagnóstico mostrado em "Editar canais" (para saber por que um app não aparece). */
+    data class Diagnostics(
+        val provider: Boolean,
+        val readEpg: Boolean,
+        val readListings: String,
+        val channelRows: Int,
+        val channelApps: List<String>,
+        val previewRows: Int,
+        val watchNextRows: Int,
+        val error: String? = null,
+    )
+    val diagnostics = kotlinx.coroutines.flow.MutableStateFlow<Diagnostics?>(null)
+
+    private fun listingsState(): String = runCatching {
+        context.packageManager.getPermissionInfo("android.permission.READ_TV_LISTINGS", 0)
+        if (ContextCompat.checkSelfPermission(context, "android.permission.READ_TV_LISTINGS") == PackageManager.PERMISSION_GRANTED) "concedida" else "negada"
+    }.getOrDefault("não existe neste Android")
+
+    private var rawChannels = 0
+    private var rawPreview = 0
+    private var rawWatchNext = 0
+
     val hasPermission: Boolean
         get() = ContextCompat.checkSelfPermission(context, PERMISSION_READ_EPG) == PackageManager.PERMISSION_GRANTED
 
@@ -94,13 +116,24 @@ class TvContentRepository(private val context: Context) {
     }.debounce(700).map { load() }.flowOn(Dispatchers.IO)
 
     suspend fun load(): State = withContext(Dispatchers.IO) {
-        if (!hasProvider) return@withContext State.NoProvider
-        if (!hasPermission) return@withContext State.NoPermission
+        fun diag(err: String? = null, ready: State.Ready? = null) {
+            diagnostics.value = Diagnostics(
+                provider = hasProvider, readEpg = hasPermission, readListings = listingsState(),
+                channelRows = rawChannels, channelApps = ready?.channels?.map { it.packageName }?.distinct().orEmpty(),
+                previewRows = rawPreview, watchNextRows = rawWatchNext, error = err,
+            )
+            android.util.Log.i("SpectraTv", "diagnóstico: ${diagnostics.value}")
+        }
+        rawChannels = 0; rawPreview = 0; rawWatchNext = 0
+        if (!hasProvider) { diag("sem provedor de canais (celular/tablet)"); return@withContext State.NoProvider }
+        if (!hasPermission) { diag("sem permissão de leitura"); return@withContext State.NoPermission }
         try {
-            buildContent()
+            buildContent().also { diag(ready = it) }
         } catch (e: SecurityException) {
+            diag("SecurityException: ${e.message}")
             State.NoPermission
         } catch (e: Exception) {
+            diag("${e.javaClass.simpleName}: ${e.message}")
             State.Ready(emptyMap())
         }
     }
@@ -148,9 +181,10 @@ class TvContentRepository(private val context: Context) {
         val out = ArrayList<TvChannel>()
         context.contentResolver.query(CHANNELS, null, null, null, null)?.use { c ->
             while (c.moveToNext()) {
+                rawChannels++
                 val type = c.str("type")
                 if (type != null && type != "TYPE_PREVIEW") continue
-                if (c.int("browsable", 1) == 0) continue
+                // Não filtra "browsable": só o launcher oficial aprova canais; aqui quem decide é a pessoa (Editar canais).
                 val id = c.long("_id") ?: continue
                 val pkg = c.str("package_name") ?: continue
                 out += TvChannel(
@@ -170,6 +204,7 @@ class TvContentRepository(private val context: Context) {
         val out = ArrayList<Pair<Int, TvProgram>>()
         context.contentResolver.query(PREVIEW_PROGRAMS, null, null, null, null)?.use { c ->
             while (c.moveToNext()) {
+                rawPreview++
                 if (c.int("browsable", 1) == 0) continue
                 val p = c.toProgram(watchNextType = null) ?: continue
                 out += c.int("weight", 0) to p
@@ -182,6 +217,7 @@ class TvContentRepository(private val context: Context) {
         val out = ArrayList<Pair<Long, TvProgram>>()
         context.contentResolver.query(WATCH_NEXT, null, null, null, null)?.use { c ->
             while (c.moveToNext()) {
+                rawWatchNext++
                 if (c.int("browsable", 1) == 0) continue
                 val p = c.toProgram(watchNextType = c.int("watch_next_type", WN_CONTINUE)) ?: continue
                 out += (c.long("last_engagement_time_utc_millis") ?: 0L) to p

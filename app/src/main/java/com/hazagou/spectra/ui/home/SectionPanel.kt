@@ -246,8 +246,26 @@ fun ChannelsPanel(vm: MainViewModel, settings: LauncherSettings, onRequestPermis
                     onConfigure = { contentSec?.let { vm.channelsOpen.value = false; vm.sectionPanel.value = it.id } }
                 )
             }
+            for ((type, info) in listOf(
+                SectionType.SUGGESTIONS to Triple("✨", "Sugestões", "Recomendações de todos os apps numa fileira"),
+                SectionType.SUBSCRIPTIONS to Triple("🔔", "Inscrições", "Canais de inscrições (YouTube, SmartTube…)"),
+            )) {
+                val sec = sections.firstOrNull { it.type == type }
+                item {
+                    ChannelRow(
+                        icon = { androidx.compose.material3.Text(info.first, fontSize = 22.sp) },
+                        title = info.second, subtitle = info.third,
+                        visible = sec?.visible == true,
+                        onToggle = {
+                            if (sec == null) vm.sectionsDo { add(HomeSection(type.name.lowercase(), type, info.second, info.first), 1) }
+                            else vm.sectionsDo { update(sec.id) { it.copy(visible = !it.visible) } }
+                        },
+                        onConfigure = { if (sec != null) { vm.channelsOpen.value = false; vm.sectionPanel.value = sec.id } }
+                    )
+                }
+            }
             if (channels.isEmpty()) item {
-                Text("Nenhum canal publicado ainda. Abra os apps (Sintonia, SmartTube, Crunchyroll…) e assista algo.", color = Spectra.TextSecondary)
+                Text("Nenhum canal encontrado. Veja o diagnóstico abaixo.", color = Spectra.TextSecondary)
             }
             grouped.forEach { (pkg, list) ->
                 val app = byPkg[pkg]
@@ -268,6 +286,29 @@ fun ChannelsPanel(vm: MainViewModel, settings: LauncherSettings, onRequestPermis
                     }
                     if (expanded == pkg) list.forEach { ch ->
                         item(key = "c_${ch.id}") { Box(Modifier.padding(start = 24.dp)) { SingleChannel(vm, sections, label, ch) } }
+                    }
+                }
+            }
+            item {
+                val d by vm.tvRepo.diagnostics.collectAsState()
+                d?.let { dg ->
+                    androidx.compose.foundation.layout.Column(
+                        Modifier.padding(top = 14.dp).fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.25f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(14.dp)
+                    ) {
+                        Text("Diagnóstico de canais", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                        val lines = listOf(
+                            "Provedor de canais do Android TV: " + if (dg.provider) "✔ presente" else "✕ ausente (celular/tablet não tem canais)",
+                            "Permissão de canais (READ_EPG_DATA): " + if (dg.readEpg) "✔ concedida" else "✕ negada",
+                            "Permissão de listagens (READ_TV_LISTINGS): " + dg.readListings,
+                            "Linhas lidas: ${dg.channelRows} canais • ${dg.previewRows} programas • ${dg.watchNextRows} ver a seguir",
+                            "Apps com canais visíveis: " + dg.channelApps.joinToString { byPkg[it]?.label ?: it }.ifBlank { "nenhum" },
+                        ) + listOfNotNull(dg.error?.let { "Erro: $it" })
+                        lines.forEach { Text(it, color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 3.dp)) }
+                        if (dg.provider && dg.readEpg && dg.channelRows == 0 && dg.watchNextRows == 0) Text(
+                            "A TV não liberou os canais de outros apps para o Spectra. Envie um print desta tela para o desenvolvedor.",
+                            color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
             }

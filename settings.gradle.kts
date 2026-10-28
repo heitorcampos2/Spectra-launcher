@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SpectraLauncher"
 include(":app")
+include(":testpublisher")

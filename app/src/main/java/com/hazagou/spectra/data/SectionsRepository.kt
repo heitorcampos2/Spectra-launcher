@@ -17,6 +17,8 @@ enum class SectionType(val label: String, val description: String, val defaultIc
     CUSTOM("Personalizada", "Você escolhe os apps", "✦"),
     APP_CONTENT("Canais e continuar assistindo", "Fileiras de cada app compatível (canais, continuar, recomendados)", "🎬"),
     WATCH_NEXT("Ver a seguir", "Continuar assistindo de TODOS os apps numa fileira só", "▶"),
+    SUGGESTIONS("Sugestões", "Recomendações de todos os apps numa fileira só", "✨"),
+    SUBSCRIPTIONS("Inscrições", "Canais de inscrições (YouTube, SmartTube…) numa fileira só", "🔔"),
     CHANNEL("Canal", "Um canal específico de um app (escolha em Editar canais)", "📺"),
     INPUTS("Entradas", "HDMI, AV e Cast/Espelhamento", "🔌"),
     TV_APPS("Aplicativos de TV", "Todos os apps feitos para TV", "🖥"),
@@ -96,7 +98,9 @@ class SectionsRepository(private val context: Context, private val settings: Set
     fun defaults(favorites: List<String> = emptyList()): List<HomeSection> = listOf(
         HomeSection("tv", SectionType.AUTO_TV, "TV", "📺"),
         HomeSection("watchnext", SectionType.WATCH_NEXT, "Ver a seguir", "▶"),
-        HomeSection("content", SectionType.APP_CONTENT, "Continuar assistindo", "🎬", showTitle = false, visible = false),
+        HomeSection("suggestions", SectionType.SUGGESTIONS, "Sugestões", "✨"),
+        HomeSection("content", SectionType.APP_CONTENT, "Blocos automáticos", "🎬", showTitle = false),
+        HomeSection("subscriptions", SectionType.SUBSCRIPTIONS, "Inscrições", "🔔"),
         HomeSection("fav", SectionType.CUSTOM, "Favoritos", "♥", apps = favorites),
         HomeSection("inputs", SectionType.INPUTS, "Entradas", "🔌"),
         HomeSection("tvapps", SectionType.TV_APPS, "Aplicativos de TV", "🖥"),
@@ -118,6 +122,26 @@ class SectionsRepository(private val context: Context, private val settings: Set
     }.getOrDefault(defaults())
 
     suspend fun current(): List<HomeSection> = sections.first()
+
+    /**
+     * Atualização para o novo padrão (uma vez): acrescenta Sugestões e Inscrições depois de "Ver a seguir"
+     * e liga os Blocos automáticos por app. Não mexe no resto da organização da pessoa.
+     */
+    suspend fun migrateToV4() {
+        val flag = androidx.datastore.preferences.core.booleanPreferencesKey("sections_v4")
+        val prefs = context.dataStore.data.first()
+        if (prefs[flag] == true) return
+        if (!prefs[key].isNullOrBlank()) {
+            val list = current().toMutableList()
+            var at = list.indexOfFirst { it.type == SectionType.WATCH_NEXT }.let { if (it < 0) list.indexOfFirst { s -> s.type == SectionType.AUTO_TV } else it } + 1
+            if (list.none { it.type == SectionType.SUGGESTIONS }) list.add(at++.coerceIn(0, list.size), HomeSection("suggestions", SectionType.SUGGESTIONS, "Sugestões", "✨"))
+            val ci = list.indexOfFirst { it.type == SectionType.APP_CONTENT }
+            if (ci >= 0) { list[ci] = list[ci].copy(visible = true); at = ci + 1 }
+            if (list.none { it.type == SectionType.SUBSCRIPTIONS }) list.add(at.coerceIn(0, list.size), HomeSection("subscriptions", SectionType.SUBSCRIPTIONS, "Inscrições", "🔔"))
+            save(list)
+        }
+        context.dataStore.edit { it[flag] = true }
+    }
 
     suspend fun save(list: List<HomeSection>) {
         val json = JSONArray().apply { list.forEach { put(it.toJson()) } }.toString()
