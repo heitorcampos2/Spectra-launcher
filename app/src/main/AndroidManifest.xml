@@ -24,6 +24,10 @@
     <!-- Atualizar o próprio app pelo GitHub (menu Atualizações) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Wallpapers › Galeria: fotos e vídeos da TV, cartão e pendrive -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
     <application
         android:name=".SpectraApp"

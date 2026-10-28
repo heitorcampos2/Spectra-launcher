@@ -115,6 +115,8 @@ fun LauncherSettings.toUiConfig(dynamicAccent: Color?): UiConfig {
     )
 }
 
+fun fontFamilyOf(f: FontChoice): FontFamily = family(f)
+
 private fun family(f: FontChoice): FontFamily = when (f) {
     FontChoice.DEFAULT, FontChoice.SANS, FontChoice.SANS_THIN, FontChoice.SANS_LIGHT, FontChoice.SANS_MEDIUM, FontChoice.CASUAL -> FontFamily.SansSerif
     FontChoice.SERIF -> FontFamily.Serif

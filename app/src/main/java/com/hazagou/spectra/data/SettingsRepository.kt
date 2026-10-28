@@ -151,6 +151,9 @@ data class LauncherSettings(
     val slideshowShuffle: Boolean = false,
     // ---- cores extras (0 = automático)
     val titleColor: Long = 0L,
+    val titleFont: FontChoice = FontChoice.DEFAULT,
+    val titleBold: Boolean = true,
+    val titleScale: Int = 100,
     val menuColor: Long = 0L,
     val parallaxStrength: Int = 2,
     val particles: Boolean = true,
@@ -235,6 +238,9 @@ class SettingsRepository(private val context: Context) {
         val slideshowFiles = stringPreferencesKey("slideshow_files")
         val slideshowShuffle = booleanPreferencesKey("slideshow_shuffle")
         val titleColor = longPreferencesKey("title_color")
+        val titleFont = stringPreferencesKey("title_font")
+        val titleBold = booleanPreferencesKey("title_bold")
+        val titleScale = intPreferencesKey("title_scale")
         val menuColor = longPreferencesKey("menu_color")
         val parallaxStrength = intPreferencesKey("parallax_strength")
         val particles = booleanPreferencesKey("particles")
@@ -316,6 +322,9 @@ class SettingsRepository(private val context: Context) {
             slideshowFiles = p[K.slideshowFiles]?.split('\n')?.filter { it.isNotBlank() } ?: d.slideshowFiles,
             slideshowShuffle = p[K.slideshowShuffle] ?: d.slideshowShuffle,
             titleColor = p[K.titleColor] ?: d.titleColor,
+            titleFont = p[K.titleFont].toEnum(d.titleFont),
+            titleBold = p[K.titleBold] ?: d.titleBold,
+            titleScale = p[K.titleScale] ?: d.titleScale,
             menuColor = p[K.menuColor] ?: d.menuColor,
             parallaxStrength = p[K.parallaxStrength] ?: d.parallaxStrength,
             particles = p[K.particles] ?: d.particles,
@@ -412,6 +421,9 @@ class SettingsRepository(private val context: Context) {
     suspend fun setSlideshowFiles(v: List<String>) = edit { it[K.slideshowFiles] = v.joinToString("\n") }
     suspend fun setSlideshowShuffle(v: Boolean) = edit { it[K.slideshowShuffle] = v }
     suspend fun setTitleColor(v: Long) = edit { it[K.titleColor] = v }
+    suspend fun setTitleFont(v: FontChoice) = edit { it[K.titleFont] = v.name }
+    suspend fun setTitleBold(v: Boolean) = edit { it[K.titleBold] = v }
+    suspend fun setTitleScale(v: Int) = edit { it[K.titleScale] = v.coerceIn(60, 180) }
     suspend fun setMenuColor(v: Long) = edit { it[K.menuColor] = v }
     suspend fun setParallaxStrength(v: Int) = edit { it[K.parallaxStrength] = v.coerceIn(1, 3) }
     suspend fun setParticles(v: Boolean) = edit { it[K.particles] = v }

@@ -27,7 +27,7 @@ data class WallpaperItem(
 data class WallCategory(val id: String, val label: String, val emoji: String, val query: String?)
 
 enum class WallSource(val label: String) {
-    CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers"), SLIDESHOW("Apresentação")
+    CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers"), GALLERY("Galeria"), SLIDESHOW("Apresentação")
 }
 
 /** Classificação dos wallpapers (acervo público Wallhaven, só conteúdo seguro, proporção de TV). */
@@ -244,6 +244,41 @@ class WallpaperRepository(private val context: Context) {
         val items = runCatching { byCategory(cat, (1..5).random()) }.getOrDefault(emptyList())
         val pick = items.shuffled().firstOrNull() ?: return@withContext null
         runCatching { download(pick.fullUrl) }.getOrNull()
+    }
+
+    /** Fotos e vídeos do aparelho (memória interna, cartão e pendrive), mais recentes primeiro. */
+    data class GalleryItem(val uri: android.net.Uri, val mime: String, val name: String, val isVideo: Boolean, val width: Int, val height: Int)
+
+    val galleryPermissions: Array<String>
+        get() = if (android.os.Build.VERSION.SDK_INT >= 33) arrayOf("android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO")
+        else arrayOf("android.permission.READ_EXTERNAL_STORAGE")
+
+    fun hasGalleryPermission(): Boolean = galleryPermissions.any {
+        androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    suspend fun gallery(limit: Int = 400): List<GalleryItem> = withContext(Dispatchers.IO) {
+        val out = ArrayList<Pair<Long, GalleryItem>>()
+        fun scan(base: android.net.Uri, video: Boolean) = runCatching {
+            val cols = arrayOf(
+                android.provider.MediaStore.MediaColumns._ID, android.provider.MediaStore.MediaColumns.MIME_TYPE,
+                android.provider.MediaStore.MediaColumns.DISPLAY_NAME, android.provider.MediaStore.MediaColumns.DATE_MODIFIED,
+                android.provider.MediaStore.MediaColumns.WIDTH, android.provider.MediaStore.MediaColumns.HEIGHT,
+            )
+            context.contentResolver.query(base, cols, null, null, "${android.provider.MediaStore.MediaColumns.DATE_MODIFIED} DESC")?.use { c ->
+                while (c.moveToNext() && out.size < limit * 2) {
+                    val id = c.getLong(0)
+                    out += c.getLong(3) to GalleryItem(
+                        android.content.ContentUris.withAppendedId(base, id), c.getString(1) ?: if (video) "video/mp4" else "image/jpeg",
+                        c.getString(2) ?: "", video, c.getInt(4), c.getInt(5)
+                    )
+                }
+            }
+        }
+        val vol = if (android.os.Build.VERSION.SDK_INT >= 29) android.provider.MediaStore.VOLUME_EXTERNAL else "external"
+        scan(android.provider.MediaStore.Images.Media.getContentUri(vol), false)
+        scan(android.provider.MediaStore.Video.Media.getContentUri(vol), true)
+        out.sortedByDescending { it.first }.map { it.second }.take(limit)
     }
 
     fun saved(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() } ?: emptyList()

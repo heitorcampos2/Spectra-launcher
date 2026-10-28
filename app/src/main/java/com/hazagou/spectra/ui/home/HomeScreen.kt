@@ -220,7 +220,13 @@ fun TitleBlock(settings: LauncherSettings, modifier: Modifier = Modifier) {
         if (settings.titleEmoji.isNotBlank()) Text(settings.titleEmoji, fontSize = 32.sp, modifier = Modifier.padding(end = 12.dp))
         Text(
             settings.title,
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = MaterialTheme.typography.displaySmall.let { base ->
+                base.copy(
+                    fontSize = base.fontSize * (settings.titleScale / 100f),
+                    fontFamily = com.hazagou.spectra.ui.theme.fontFamilyOf(settings.titleFont),
+                    fontWeight = if (settings.titleBold) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                )
+            }.copy(
                 brush = if (settings.titleColor != 0L) Brush.linearGradient(listOf(Color(settings.titleColor), Color(settings.titleColor)))
                 else Brush.linearGradient(listOf(Color.White, ui.accent, Spectra.Lilac)),
                 shadow = Shadow((if (settings.titleColor != 0L) Color(settings.titleColor) else ui.accent).copy(alpha = 0.6f), Offset(0f, 2f), 18f)

@@ -89,11 +89,11 @@ interface LauncherActions {
 private enum class Cat(val label: String, val icon: String, val description: String, val preview: Boolean) {
     PROFILE("Perfil e título", "✦", "Nome, avatar, título, emoji e ícone especial da tela inicial.", true),
     LOOK("Cartões", "▭", "Estilo, tamanho e cantos dos cartões.", true),
-    COLORS("Cores e fundo", "🎨", "Cor de destaque (32 cores, luminosidade, opacidade), cor/degradê de fundo e tom dos painéis.", true),
+    COLORS("Cores", "🎨", "Cor de destaque (64 cores, temas prontos, #HEX), cores dos menus, do título e tom dos painéis.", true),
     FONT("Fonte", "A", "Família da fonte, negrito, itálico e tamanho do texto.", true),
     LAYOUT("Layout e foco", "▤", "Nomes das seções, espaçamentos, margens, opacidade e comportamento do foco.", true),
     STATUS("Barra de status", "📶", "Wi-Fi, notificações, engrenagem, bateria, relógio e avatar no canto superior direito.", true),
-    WALL("Fundo", "🖼", "Wallpaper (imagem, GIF ou vídeo), movimento, parallax, troca automática.", true),
+    WALL("Wallpaper e fundo", "🖼", "Wallpaper (imagem, GIF ou vídeo), fundo em cor/degradê, movimento, efeitos e troca automática.", true),
     SECTIONS("Seções", "☰", "Criar, ordenar e personalizar as seções da tela inicial.", false),
     CHANNELS("Canais", "📺", "Ver a seguir e cada canal dos apps como fileira própria.", false),
     GENERAL("Geral", "⚙", "Modo ocioso e comportamento geral.", false),
@@ -287,6 +287,16 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 item { Group("Título") }
                 item { SettingRow("Texto do título", s.title, "Ex.: TV, Sala, Quarto…") { dialog = "title" } }
                 item { Toggle("Mostrar título", s.showTitle) { vm.launch { setShowTitle(it) } } }
+                item {
+                    SettingRow("Fonte do título", s.titleFont.label, "Só o título da tela inicial (o resto segue Personalizar › Fonte)",
+                        onAdjust = { d -> vm.launch { setTitleFont(com.hazagou.spectra.data.FontChoice.entries.let { l -> l[(l.indexOf(s.titleFont) + d).mod(l.size)] }) } }) {
+                        vm.launch { setTitleFont(com.hazagou.spectra.data.FontChoice.entries.toList().next(s.titleFont)) }
+                    }
+                }
+                item { Toggle("Título em negrito", s.titleBold) { vm.launch { setTitleBold(it) } } }
+                item { Stepper("Tamanho do título", s.titleScale, 60..180, 10, "%") { v -> vm.launch { setTitleScale(v) } } }
+                item { SettingRow("Cor do título", if (s.titleColor == 0L) "Degradê automático" else "#%06X".format(s.titleColor and 0xFFFFFFL),
+                    "Escolha uma cor fixa ou ✕ para o degradê automático") { dialog = "titleColor" } }
                 item { SettingRow("Emoji do título", s.titleEmoji.ifBlank { "nenhum" }) { dialog = "emoji" } }
                 item { Text("Ícone especial", color = Spectra.TextSecondary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp, top = 6.dp)) }
                 item {
@@ -352,7 +362,16 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 }
             }
             Cat.WALL -> {
-                item { SettingRow("Escolher wallpaper", "Abrir ›", "Categorias, Google Imagens, arquivos (foto, GIF, vídeo)") { vm.open(Screen.WALLPAPER) } }
+                item { SettingRow("Escolher wallpaper", "Abrir ›", "Categorias, classificação, Google, galeria (foto, GIF, vídeo)") { vm.open(Screen.WALLPAPER) } }
+                item { Group("Fundo (cor sólida ou degradê, quando não usar wallpaper)") }
+                item {
+                    SettingRow("Tipo de fundo", s.bgMode.label, "Wallpaper, cor sólida ou degradê de 2 cores",
+                        onAdjust = { d -> vm.launch { setBgMode(com.hazagou.spectra.data.BgMode.entries.let { l -> l[(l.indexOf(s.bgMode) + d).mod(l.size)] }) } }) {
+                        vm.launch { setBgMode(com.hazagou.spectra.data.BgMode.entries.toList().next(s.bgMode)) }
+                    }
+                }
+                item { SettingRow("Cor de fundo 1", "#%06X".format(s.bgColor1 and 0xFFFFFFL), "Usada no fundo sólido e no início do degradê") { dialog = "bg1" } }
+                item { SettingRow("Cor de fundo 2", "#%06X".format(s.bgColor2 and 0xFFFFFFL), "Final do degradê") { dialog = "bg2" } }
                 item { SettingRow("Movimento", s.wallpaperMotion.label, onAdjust = { d -> vm.launch { setWallpaperMotion(WallpaperMotion.entries.let { l -> l[(l.indexOf(s.wallpaperMotion) + d).mod(l.size)] }) } }) {
                     vm.launch { setWallpaperMotion(WallpaperMotion.entries.toList().next(s.wallpaperMotion)) }
                 } }
@@ -361,7 +380,13 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                     vm.launch { setWallTransition(com.hazagou.spectra.data.WallTransition.entries.toList().next(s.wallTransition)) }
                 } }
                 item { Stepper("Intensidade do parallax", s.parallaxStrength, 1..3, 1) { v -> vm.launch { setParallaxStrength(v) } } }
-                item { Toggle("Partículas flutuantes", s.particles) { vm.launch { setParticles(it) } } }
+                item { Toggle("Efeito animado por cima da imagem", s.particles) { vm.launch { setParticles(it) } } }
+                item {
+                    SettingRow("Tipo de efeito", s.particleStyle.label, "Pontos de luz, neve, estrelas, bokeh, vaga-lumes ou chuva",
+                        onAdjust = { d -> vm.launch { setParticles(true); setParticleStyle(com.hazagou.spectra.data.ParticleStyle.entries.let { l -> l[(l.indexOf(s.particleStyle) + d).mod(l.size)] }) } }) {
+                        vm.launch { setParticles(true); setParticleStyle(com.hazagou.spectra.data.ParticleStyle.entries.toList().next(s.particleStyle)) }
+                    }
+                }
                 item { Stepper("Escurecimento", (s.dim * 100).toInt(), 0..80, 5, "%") { v -> vm.launch { setDim(v / 100f) } } }
                 item { Toggle("Desfoque suave", s.softBlur) { vm.launch { setSoftBlur(it) } } }
                 item { Group("Troca automática") }
@@ -416,15 +441,6 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                         }
                     }
                 }
-                item { Group("Fundo") }
-                item {
-                    SettingRow("Tipo de fundo", s.bgMode.label, "Wallpaper, cor sólida ou degradê de 2 cores",
-                        onAdjust = { d -> vm.launch { setBgMode(com.hazagou.spectra.data.BgMode.entries.let { l -> l[(l.indexOf(s.bgMode) + d).mod(l.size)] }) } }) {
-                        vm.launch { setBgMode(com.hazagou.spectra.data.BgMode.entries.toList().next(s.bgMode)) }
-                    }
-                }
-                item { SettingRow("Cor de fundo 1", "#%06X".format(s.bgColor1 and 0xFFFFFFL), "Usada no fundo sólido e no início do degradê") { dialog = "bg1" } }
-                item { SettingRow("Cor de fundo 2", "#%06X".format(s.bgColor2 and 0xFFFFFFL), "Final do degradê") { dialog = "bg2" } }
                 item { Group("Menus e título") }
                 item { SettingRow("Cor dos menus e painéis", if (s.menuColor == 0L) "Pelo tom (abaixo)" else "#%06X".format(s.menuColor and 0xFFFFFFL),
                     "Fundo do menu lateral, configurações, diálogos e cartões") { dialog = "menuColor" } }

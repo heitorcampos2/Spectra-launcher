@@ -133,7 +133,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                     WallSource.CATEGORIES -> repo.byCategory(cat, pg + 1)
                     WallSource.RANKED -> repo.ranked(rk, rs, th, pg + 1)
                     WallSource.GOOGLE -> repo.searchGoogle(q, pg, settings.googleApiKey, settings.googleCx, hq)
-                    WallSource.SAVED, WallSource.SLIDESHOW -> emptyList()
+                    WallSource.SAVED, WallSource.SLIDESHOW, WallSource.GALLERY -> emptyList()
                 }
                 val known = results.map { it.id }.toSet()
                 results.addAll(list.filter { it.id !in known })
@@ -168,6 +168,27 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
         }
     }
 
+    // ---------------- Galeria (fotos/vídeos do aparelho e pendrive)
+    var galleryItems by remember { mutableStateOf<List<com.hazagou.spectra.data.WallpaperRepository.GalleryItem>?>(null) }
+    var galleryDenied by remember { mutableStateOf(false) }
+    fun loadGallery() {
+        scope.launch { galleryItems = runCatching { repo.gallery() }.getOrDefault(emptyList()) }
+    }
+    val galleryPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.any { it } || repo.hasGalleryPermission()) { galleryDenied = false; loadGallery() } else galleryDenied = true
+    }
+    fun importAndApply(uri: android.net.Uri, mime: String?) {
+        busy = "Preparando o wallpaper…"
+        scope.launch {
+            runCatching { repo.import(uri, mime) }
+                .onSuccess { busy = null; savedFiles = repo.saved(); apply(it) }
+                .onFailure { busy = null; toast(context, "Não foi possível usar este arquivo") }
+        }
+    }
+    val pickSystemGallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) importAndApply(uri, null)
+    }
+
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             runCatching { repo.import(uri) }.onSuccess { savedFiles = repo.saved(); apply(it) }
@@ -178,6 +199,10 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
     LaunchedEffect(source, category, rank, res, theme) {
         if (source == WallSource.CATEGORIES || source == WallSource.RANKED) load(true)
         if (source == WallSource.SAVED || source == WallSource.SLIDESHOW) savedFiles = repo.saved()
+        if (source == WallSource.GALLERY) {
+            if (repo.hasGalleryPermission()) loadGallery()
+            else runCatching { galleryPermission.launch(repo.galleryPermissions) }.onFailure { galleryDenied = true }
+        }
     }
     LaunchedEffect(Unit) { delay(80); runCatching { firstTab.requestFocus() } }
 
@@ -196,7 +221,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                         PillButton(
                             s.label,
                             modifier = if (i == 0) Modifier.focusRequester(firstTab) else Modifier,
-                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.RANKED -> "🏆"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾"; WallSource.SLIDESHOW -> "🎞" },
+                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.RANKED -> "🏆"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾"; WallSource.GALLERY -> "🖼"; WallSource.SLIDESHOW -> "🎞" },
                             selected = source == s
                         ) { source = s; webMode = false; if (s == WallSource.GOOGLE) { results.clear(); error = null } }
                     }
@@ -280,6 +305,19 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                     }
                 }
                 WallSource.SAVED -> Spacer(Modifier.height(12.dp))
+                WallSource.GALLERY -> {
+                    Row(Modifier.padding(horizontal = 56.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PillButton("Atualizar", leading = "⟳") { if (repo.hasGalleryPermission()) loadGallery() else galleryPermission.launch(repo.galleryPermissions) }
+                        PillButton("Abrir app de galeria", leading = "🖼") {
+                            runCatching { pickSystemGallery.launch("image/*") }.onFailure { toast(context, "Esta TV não tem app de galeria") }
+                        }
+                        PillButton("Arquivos / pendrive", leading = "📁") {
+                            runCatching { pickFile.launch(arrayOf("image/*", "video/*")) }.onFailure { toast(context, "Seletor de arquivos indisponível nesta TV") }
+                        }
+                        Text("Fotos e vídeos da TV, cartão de memória e pendrive • OK usa como wallpaper",
+                            color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 WallSource.SLIDESHOW -> {
                     val opts = listOf(15, 30, 60, 120, 300, 600, 1800, 3600)
                     fun fmt(sec: Int) = if (sec < 60) "$sec s" else if (sec < 3600) "${sec / 60} min" else "${sec / 3600} h"
@@ -329,7 +367,30 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                if (source == WallSource.SLIDESHOW) {
+                if (source == WallSource.GALLERY) {
+                    val list = galleryItems
+                    when {
+                        galleryDenied -> item(span = { GridItemSpan(4) }) {
+                            Column {
+                                Text("Sem permissão para ver as fotos. Toque em \"Atualizar\" e permita, ou libere em Configurações › Apps › Spectra Launcher › Permissões.",
+                                    color = Spectra.TextSecondary)
+                            }
+                        }
+                        list == null -> item(span = { GridItemSpan(4) }) {
+                            Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = LocalUi.current.accent) }
+                        }
+                        list.isEmpty() -> item(span = { GridItemSpan(4) }) {
+                            Text("Nenhuma foto ou vídeo encontrado. Conecte um pendrive ou use \"Abrir app de galeria\".", color = Spectra.TextSecondary)
+                        }
+                        else -> items(list, key = { "g_" + it.uri }) { g ->
+                            Thumb(
+                                model = g.uri,
+                                label = g.name.ifBlank { null } ?: if (g.isVideo) "Vídeo" else "Foto",
+                                badge = when { g.isVideo -> "▶ VÍDEO"; g.mime.contains("gif") -> "GIF"; g.width >= 3840 -> "4K"; g.width >= 1920 -> "HD"; else -> null }
+                            ) { importAndApply(g.uri, g.mime) }
+                        }
+                    }
+                } else if (source == WallSource.SLIDESHOW) {
                     val imgs = savedFiles.filterNot { repo.isVideo(it) }
                     items(imgs, key = { "s_" + it.path }) { f ->
                         val on = f.absolutePath in settings.slideshowFiles
