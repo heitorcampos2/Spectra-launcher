@@ -63,6 +63,12 @@ enum class SurfaceTone(val label: String, val argb: Long, val high: Long) {
     NAVY("Azul-noite", 0xCC0F1E3DL, 0xE6162A52L),
     FOREST("Floresta", 0xCC10291EL, 0xE6173A2BL),
     GLASS("Vidro claro", 0x66FFFFFFL, 0xD9303046L),
+    PURPLE("Roxo", 0xCC2A1050L, 0xE63A1870L),
+    OCEAN("Oceano", 0xCC06303DL, 0xE60A4254L),
+    SUNSET("Pôr do sol", 0xCC3D1A0AL, 0xE6522612L),
+    ROSE("Rosa", 0xCC3D0F2EL, 0xE6521640L),
+    COFFEE("Café", 0xCC2B1E16L, 0xE63A2A1EL),
+    SLATE("Ardósia", 0xCC1E293BL, 0xE6293548L),
 }
 
 enum class FontChoice(val label: String) {
@@ -86,7 +92,7 @@ data class LauncherSettings(
     val showGear: Boolean = true,
     val showBattery: Boolean = true,
     val showSearch: Boolean = true,
-    val hideStatusOnScroll: Boolean = true,
+    val hideStatusOnScroll: Boolean = false,
     // ---- aparência
     val accent: Long = 0xFFE0135AL,
     val autoAccent: Boolean = true,
@@ -316,6 +322,22 @@ class SettingsRepository(private val context: Context) {
     suspend fun setShowBattery(v: Boolean) = edit { it[K.showBattery] = v }
     suspend fun setShowSearch(v: Boolean) = edit { it[K.showSearch] = v }
     suspend fun setHideStatusOnScroll(v: Boolean) = edit { it[K.hideStatusOnScroll] = v }
+
+    /** Atualização única: barra de status fixa ao rolar (novo padrão). */
+    suspend fun migrateV4() {
+        val flag = booleanPreferencesKey("settings_v4")
+        context.dataStore.edit { p ->
+            if (p[flag] != true) { p[K.hideStatusOnScroll] = false; p[flag] = true }
+        }
+    }
+
+    suspend fun applyColorTheme(t: com.hazagou.spectra.ui.theme.ColorTheme) = edit {
+        it[K.accent] = t.accent
+        it[K.autoAccent] = false
+        it[K.bgColor1] = t.bg1
+        it[K.bgColor2] = t.bg2
+        it[K.surfaceTone] = t.tone.name
+    }
     suspend fun setAccent(v: Long) = edit { it[K.accent] = v; it[K.autoAccent] = false }
     suspend fun setAutoAccent(v: Boolean) = edit { it[K.autoAccent] = v }
     suspend fun setAccentFull(color: Long, lum: Int, alpha: Float, auto: Boolean) = edit {

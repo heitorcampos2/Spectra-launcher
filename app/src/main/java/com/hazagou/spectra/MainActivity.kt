@@ -94,8 +94,9 @@ class MainActivity : ComponentActivity(), LauncherActions {
     private var epgAskedThisSession = false
 
     private val epgPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[TvContentRepository.PERMISSION_READ_EPG] == true || vm.tvRepo.hasPermission) vm.refresh()
-        else toast(this, "Sem permissão: use o comando ADB em Personalizar › Launcher e permissões")
+        vm.refresh()
+        if (!vm.tvRepo.hasPermission || vm.tvRepo.needsListings)
+            toast(this, "A TV não liberou os canais. Veja MENU ☰ › Editar canais › Diagnóstico")
     }
 
     private val roleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -267,7 +268,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
     private fun maybeAskEpg() {
         if (epgAskedThisSession) return
         epgAskedThisSession = true
-        if (vm.tvRepo.hasProvider && !vm.tvRepo.hasPermission) requestEpgPermission()
+        if (vm.tvRepo.hasProvider && (!vm.tvRepo.hasPermission || vm.tvRepo.needsListings)) requestEpgPermission()
     }
 
     // ------------------------------------------------------------------ LauncherActions
@@ -315,8 +316,12 @@ class MainActivity : ComponentActivity(), LauncherActions {
 
     override fun requestEpgPermission() {
         if (!vm.tvRepo.hasProvider) { toast(this, "Esta TV não tem o provedor de canais do Android TV"); return }
-        if (vm.tvRepo.hasPermission) { vm.refresh(); toast(this, "Permissão já concedida ✔"); return }
-        epgPermission.launch(arrayOf(TvContentRepository.PERMISSION_READ_EPG, "android.permission.READ_TV_LISTINGS"))
+        val missing = buildList {
+            if (!vm.tvRepo.hasPermission) add(TvContentRepository.PERMISSION_READ_EPG)
+            if (vm.tvRepo.needsListings) add(TvContentRepository.PERMISSION_READ_LISTINGS)
+        }
+        if (missing.isEmpty()) { vm.refresh(); toast(this, "Permissões de canais já concedidas ✔"); return }
+        epgPermission.launch(missing.toTypedArray())
     }
 
     override fun isGoogleTv(): Boolean =

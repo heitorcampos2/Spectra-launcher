@@ -53,6 +53,7 @@ class SpectraApp : Application(), ImageLoaderFactory {
         // Servidor do controle remoto: liga/desliga sozinho conforme a configuração (PIN + ativado)
         appScope.launch { remote.config.collect { RemoteServer.sync(this@SpectraApp, remote) } }
         appScope.launch { runCatching { sections.migrateToV4() } }
+        appScope.launch { runCatching { settings.migrateV4() } }
     }
 
     /** Coil afinado para TV: cache em memória generoso, cache em disco e User-Agent de navegador. */

@@ -33,24 +33,49 @@ object Spectra {
     val TextSecondary = Color(0xFFB9B3DA)
 
     /** Atalhos rápidos (linha única). */
+    /** Atalhos rápidos (16) nas configurações. */
     val AccentPresets = listOf(
-        0xFFE0135AL, 0xFF9C5AA8L, 0xFF7C4DFFL, 0xFF00E5FFL, 0xFF1DE9B6L,
-        0xFFFFC400L, 0xFFFF6D00L, 0xFFFF4081L, 0xFF2979FFL, 0xFFFFFFFFL,
+        0xFFE0135AL, 0xFFFF4081L, 0xFFD500F9L, 0xFF9C5AA8L, 0xFF7C4DFFL, 0xFF3D5AFEL, 0xFF2979FFL, 0xFF00B0FFL,
+        0xFF00E5FFL, 0xFF1DE9B6L, 0xFF00E676L, 0xFF76FF03L, 0xFFFFD600L, 0xFFFFC400L, 0xFFFF6D00L, 0xFFFFFFFFL,
     )
 
-    /** Grade completa de 32 cores (8 × 4), do vermelho ao rosa, mais neutros. */
+    /** Grade completa de 64 cores (8 × 8): vivas, neon, pastéis, profundas, terrosas e neutras. */
     val ColorGrid: List<Long> = listOf(
+        // vivas
         0xFFFF3D00L, 0xFFFF5722L, 0xFFFF9100L, 0xFFFFB300L, 0xFFFFD600L, 0xFFEEFF41L, 0xFFB2FF59L, 0xFF76FF03L,
         0xFF64DD17L, 0xFF00E676L, 0xFF1DE9B6L, 0xFF00BFA5L, 0xFF00E5FFL, 0xFF18FFFFL, 0xFF00B0FFL, 0xFF40C4FFL,
         0xFF2979FFL, 0xFF304FFEL, 0xFF3D5AFEL, 0xFF651FFFL, 0xFF7C4DFFL, 0xFFAA00FFL, 0xFFD500F9L, 0xFFE040FBL,
         0xFFF50057L, 0xFFFF4081L, 0xFFE0135AL, 0xFFFF1744L, 0xFF9C5AA8L, 0xFFC9A6E8L, 0xFFBDBDBDL, 0xFFFFFFFFL,
+        // neon
+        0xFF39FF14L, 0xFF00FFC6L, 0xFF00F0FFL, 0xFF4D4DFFL, 0xFFBC13FEL, 0xFFFF00E6L, 0xFFFF2079L, 0xFFFFF01FL,
+        // pastéis
+        0xFFFFB3BAL, 0xFFFFDFBAL, 0xFFFFFFBAL, 0xFFBAFFC9L, 0xFFBAE1FFL, 0xFFD7BAFFL, 0xFFF4C2E8L, 0xFFC5F0EEL,
+        // profundas
+        0xFFB71C1CL, 0xFFE65100L, 0xFFF9A825L, 0xFF2E7D32L, 0xFF00695CL, 0xFF01579BL, 0xFF283593L, 0xFF6A1B9AL,
+        // terrosas e metálicas
+        0xFF8D6E63L, 0xFFA1887FL, 0xFFD7CCC8L, 0xFFC0A062L, 0xFFD4AF37L, 0xFFB87333L, 0xFF90A4AEL, 0xFF607D8BL,
     )
 
-    /** Cores de fundo sugeridas (escuras, boas para TV). */
     val BackgroundGrid: List<Long> = listOf(
         0xFF000000L, 0xFF0E0B2AL, 0xFF17154FL, 0xFF1A1033L, 0xFF2A1665L, 0xFF3D0F3AL, 0xFF5B1B6EL, 0xFF4A0E2EL,
         0xFF3A0A0AL, 0xFF4E2A06L, 0xFF3B3A0AL, 0xFF0D2B12L, 0xFF06352FL, 0xFF06303DL, 0xFF0A1E3DL, 0xFF101828L,
         0xFF1E1E1EL, 0xFF2B2B2BL, 0xFF263238L, 0xFF37474FL, 0xFF4E342EL, 0xFF311B92L, 0xFF880E4FL, 0xFFB71C1CL,
+    )
+
+    /** Temas prontos: cor de destaque + cores de fundo + tom dos painéis de uma vez. */
+    val ColorThemes = listOf(
+        ColorTheme("Spectra", "🐉", 0xFFE0135AL, 0xFF17154FL, 0xFF5B1B6EL, com.hazagou.spectra.data.SurfaceTone.INDIGO),
+        ColorTheme("Neon", "⚡", 0xFF00F0FFL, 0xFF05010FL, 0xFF2A0845L, com.hazagou.spectra.data.SurfaceTone.AMOLED),
+        ColorTheme("Oceano", "🌊", 0xFF1DE9B6L, 0xFF06303DL, 0xFF0A1E3DL, com.hazagou.spectra.data.SurfaceTone.OCEAN),
+        ColorTheme("Pôr do sol", "🌅", 0xFFFF9100L, 0xFF3A0A0AL, 0xFF6A1B4DL, com.hazagou.spectra.data.SurfaceTone.SUNSET),
+        ColorTheme("Floresta", "🌿", 0xFF76FF03L, 0xFF0D2B12L, 0xFF06352FL, com.hazagou.spectra.data.SurfaceTone.FOREST),
+        ColorTheme("Aurora", "🌌", 0xFFB2FF59L, 0xFF0A1E3DL, 0xFF311B92L, com.hazagou.spectra.data.SurfaceTone.NAVY),
+        ColorTheme("Sakura", "🌸", 0xFFF4C2E8L, 0xFF3D0F3AL, 0xFF880E4FL, com.hazagou.spectra.data.SurfaceTone.ROSE),
+        ColorTheme("Ouro", "👑", 0xFFD4AF37L, 0xFF1A1206L, 0xFF4E342EL, com.hazagou.spectra.data.SurfaceTone.COFFEE),
+        ColorTheme("Gelo", "❄️", 0xFFBAE1FFL, 0xFF101828L, 0xFF263238L, com.hazagou.spectra.data.SurfaceTone.SLATE),
+        ColorTheme("AMOLED", "🌑", 0xFFFFFFFFL, 0xFF000000L, 0xFF000000L, com.hazagou.spectra.data.SurfaceTone.AMOLED),
+        ColorTheme("Vinho", "🍷", 0xFFFF4081L, 0xFF3A0A0AL, 0xFF4A0E2EL, com.hazagou.spectra.data.SurfaceTone.WINE),
+        ColorTheme("Roxo real", "💜", 0xFFD500F9L, 0xFF1A1033L, 0xFF2A1665L, com.hazagou.spectra.data.SurfaceTone.PURPLE),
     )
 
     fun adjust(c: Color, lum: Int): Color = when {
@@ -140,3 +165,13 @@ fun SpectraTheme(ui: UiConfig, settings: LauncherSettings? = null, content: @Com
         MaterialTheme(colorScheme = scheme, typography = if (settings != null) typography(settings) else Typography(), content = content)
     }
 }
+
+/** Tema de cores pronto (Configurações › Cores e fundo › Temas prontos). */
+data class ColorTheme(
+    val name: String,
+    val emoji: String,
+    val accent: Long,
+    val bg1: Long,
+    val bg2: Long,
+    val tone: com.hazagou.spectra.data.SurfaceTone,
+)

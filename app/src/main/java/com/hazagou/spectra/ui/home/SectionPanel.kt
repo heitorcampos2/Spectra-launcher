@@ -219,8 +219,8 @@ fun ChannelsPanel(vm: MainViewModel, settings: LauncherSettings, onRequestPermis
         val channels: List<TvChannel> = ready?.channels.orEmpty()
         val grouped = channels.groupBy { it.packageName }.toList().sortedBy { (pkg, _) -> byPkg[pkg]?.label?.lowercase() ?: pkg }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (tv is TvContentRepository.State.NoPermission) item {
-                OptionRow("Permitir leitura de canais", "🔓", Modifier.focusRequester(first)) { onRequestPermission() }
+            if (tv is TvContentRepository.State.NoPermission || vm.tvRepo.needsListings) item {
+                OptionRow("Liberar canais dos apps", "🔓", Modifier.focusRequester(first)) { onRequestPermission() }
             }
             val wn = sections.firstOrNull { it.type == SectionType.WATCH_NEXT }
             item {
@@ -228,7 +228,7 @@ fun ChannelsPanel(vm: MainViewModel, settings: LauncherSettings, onRequestPermis
                     icon = { androidx.compose.material3.Text("▶", color = LocalUi.current.accent, fontSize = 22.sp) },
                     title = "Ver a seguir", subtitle = "${ready?.watchNext?.size ?: 0} itens de todos os apps",
                     visible = wn?.visible == true,
-                    modifier = if (tv !is TvContentRepository.State.NoPermission) Modifier.focusRequester(first) else Modifier,
+                    modifier = if (tv !is TvContentRepository.State.NoPermission && !vm.tvRepo.needsListings) Modifier.focusRequester(first) else Modifier,
                     onToggle = {
                         if (wn == null) vm.sectionsDo { add(HomeSection("watchnext", SectionType.WATCH_NEXT, "Ver a seguir", "▶"), 0) }
                         else vm.sectionsDo { update(wn.id) { it.copy(visible = !it.visible) } }
@@ -305,8 +305,19 @@ fun ChannelsPanel(vm: MainViewModel, settings: LauncherSettings, onRequestPermis
                             "Apps com canais visíveis: " + dg.channelApps.joinToString { byPkg[it]?.label ?: it }.ifBlank { "nenhum" },
                         ) + listOfNotNull(dg.error?.let { "Erro: $it" })
                         lines.forEach { Text(it, color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 3.dp)) }
-                        if (dg.provider && dg.readEpg && dg.channelRows == 0 && dg.watchNextRows == 0) Text(
-                            "A TV não liberou os canais de outros apps para o Spectra. Envie um print desta tela para o desenvolvedor.",
+                        if (vm.tvRepo.needsListings) {
+                            Text(
+                                "Falta a permissão de listagens: sem ela o Android esconde os canais dos outros apps. " +
+                                    "Toque em \"Liberar canais dos apps\" no topo. Se a TV não mostrar a pergunta, libere pelo computador:",
+                                color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)
+                            )
+                            Text(
+                                "adb shell pm grant ${com.hazagou.spectra.BuildConfig.APPLICATION_ID} android.permission.READ_TV_LISTINGS",
+                                color = Spectra.Lilac, fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        } else if (dg.provider && dg.readEpg && dg.channelRows == 0 && dg.watchNextRows == 0) Text(
+                            "Os apps ainda não publicaram canais. Abra o Sintonia (ou outro app) e assista algo por alguns segundos.",
                             color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)
                         )
                     }

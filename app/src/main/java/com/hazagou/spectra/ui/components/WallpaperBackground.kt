@@ -92,7 +92,8 @@ fun WallpaperBackground(
     val strengthPx = with(density) { (10 + settings.parallaxStrength * 12).dp.toPx() }
     val pOffset by animateOffsetAsState(
         targetValue = if (useParallax) Offset(-parallax.target.x * strengthPx, -parallax.target.y * strengthPx * 0.6f) else Offset.Zero,
-        animationSpec = spring(dampingRatio = 1f, stiffness = 60f),
+        // desliza devagar e desacelera suavemente (sem "pulo" ao trocar de cartão/fileira)
+        animationSpec = tween(1600, easing = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)),
         label = "parallax"
     )
     val transition = rememberInfiniteTransition(label = "wp")

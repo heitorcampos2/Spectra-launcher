@@ -168,6 +168,17 @@ class SectionsRepository(private val context: Context, private val settings: Set
         save(list)
     }
 
+    /** Coloca a seção [id] logo antes (ou depois) da seção [targetId]. */
+    suspend fun moveNextTo(id: String, targetId: String, after: Boolean) {
+        val list = current().toMutableList()
+        val s = list.firstOrNull { it.id == id } ?: return
+        list.remove(s)
+        val t = list.indexOfFirst { it.id == targetId }
+        if (t < 0) return
+        list.add(if (after) t + 1 else t, s)
+        save(list)
+    }
+
     suspend fun resetDefaults() = save(defaults())
 
     /** Liga/desliga um canal individual na tela inicial (cria a seção do canal se não existir). */

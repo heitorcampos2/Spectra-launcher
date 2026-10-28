@@ -199,7 +199,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 SectionType.SHORTCUTS -> rows += HomeRowModel.Items(sec, ShortcutKind.entries.map { HomeItem.Shortcut(it) }, style, size)
                 SectionType.WATCH_NEXT -> {
-                    if (tv is TvContentRepository.State.NoPermission && !permissionAdded) {
+                    if ((tv is TvContentRepository.State.NoPermission || tvRepo.needsListings) && !permissionAdded) {
                         rows += HomeRowModel.Permission; permissionAdded = true
                     }
                     val list = (tv as? TvContentRepository.State.Ready)?.watchNext.orEmpty()
@@ -209,6 +209,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (list.isNotEmpty()) rows += HomeRowModel.Programs("wn_${sec.id}", sec.title, sec.icon, null, list, null, sec)
                 }
                 SectionType.SUGGESTIONS -> {
+                    if (tvRepo.needsListings && !permissionAdded) { rows += HomeRowModel.Permission; permissionAdded = true }
                     val ready = tv as? TvContentRepository.State.Ready
                     // intercala os apps (1 de cada por vez) para a fileira ficar variada
                     val perApp = ready?.byPackage.orEmpty().values
@@ -329,6 +330,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val m = moving.value ?: return
         val order = itemsOf(m.sectionId)
         sectionsDo { moveApp(m.sectionId, m.pkg, delta, order) }
+    }
+
+    /** Move a seção para cima/baixo trocando com a seção VISÍVEL vizinha (ignora seções vazias/ocultas). */
+    fun moveSectionVisible(id: String, delta: Int) {
+        val order = homeRows.value.mapNotNull { r ->
+            when (r) {
+                is HomeRowModel.Items -> r.section.id
+                is HomeRowModel.Programs -> r.section?.id
+                is HomeRowModel.ContentHeader -> r.sectionId
+                HomeRowModel.Permission -> null
+            }
+        }.distinct()
+        val i = order.indexOf(id)
+        val target = order.getOrNull(i + delta) ?: return
+        if (i < 0) return
+        sectionsDo { moveNextTo(id, target, after = delta > 0) }
     }
 
     fun moveSection(pkg: String, delta: Int) = launch {

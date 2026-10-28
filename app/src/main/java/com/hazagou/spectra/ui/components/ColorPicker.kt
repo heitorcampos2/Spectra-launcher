@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +64,10 @@ fun ColorPickerDialog(
     SpectraDialog(onDismiss, width = 640.dp) {
         Text(title, color = Color.White, style = MaterialTheme.typography.headlineSmall)
         val cells: List<Long?> = colors + (if (allowAuto) listOf<Long?>(null) else emptyList())
+        androidx.compose.foundation.layout.Column(
+            Modifier.heightIn(max = 260.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
         cells.chunked(8).forEachIndexed { r, row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEachIndexed { c, col ->
@@ -80,6 +86,7 @@ fun ColorPickerDialog(
                     }
                 }
             }
+        }
         }
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {

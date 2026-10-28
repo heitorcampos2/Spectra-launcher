@@ -388,11 +388,28 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                     SettingRow("Cor de destaque", if (s.autoAccent) "Automática (wallpaper)" else "#%06X".format(s.accent and 0xFFFFFFL),
                         "Grade com 32 cores, luminosidade, opacidade e cor dinâmica") { dialog = "accent" }
                 }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)) {
-                        Spectra.AccentPresets.forEach { col ->
+                items(Spectra.AccentPresets.chunked(8)) { rowCols ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)) {
+                        rowCols.forEach { col ->
                             FocusCard(Modifier.size(40.dp), corner = 20.dp, background = Color(col), onClick = { vm.launch { setAccent(col) } }) { _ ->
                                 if (!s.autoAccent && s.accent == col) Box(Modifier.size(12.dp).align(Alignment.Center).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f)))
+                            }
+                        }
+                    }
+                }
+                item { SettingRow("Cor personalizada", "#HEX ›", "Digite qualquer cor, ex.: FF6A00") { dialog = "hex" } }
+                item { Group("Temas prontos") }
+                item { Text("Cor de destaque + fundo + painéis de uma vez", color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 6.dp)) }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp)) {
+                        items(Spectra.ColorThemes) { t ->
+                            FocusCard(Modifier.width(120.dp).height(84.dp), corner = 16.dp, glow = false,
+                                background = Color(t.bg1), onClick = { vm.launch { applyColorTheme(t) }; toast(ctx, "Tema ${t.name} aplicado") }) { _ ->
+                                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(t.bg1), Color(t.bg2)))))
+                                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(t.emoji, fontSize = 22.sp)
+                                    Text(t.name, color = Color(t.accent), style = MaterialTheme.typography.labelLarge)
+                                }
                             }
                         }
                     }
@@ -622,6 +639,11 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
             if (com.hazagou.spectra.ui.remote.applyPin(vm, ctx, p)) vm.remotePairOpen.value = true
         }, onDismiss = { dialog = null })
         "tvName" -> TextEditDialog("Nome desta TV", remoteCfg.tvName, onSave = { t -> vm.remote.setTvName(t.trim().take(30)) }, onDismiss = { dialog = null })
+        "hex" -> TextEditDialog("Cor personalizada (#RRGGBB)", "#%06X".format(s.accent and 0xFFFFFFL), onSave = { t ->
+            val hex = t.trim().removePrefix("#")
+            val v = hex.takeIf { it.length == 6 }?.toLongOrNull(16)
+            if (v == null) toast(ctx, "Use 6 dígitos, ex.: FF6A00") else vm.launch { setAccent(0xFF000000L or v) }
+        }, onDismiss = { dialog = null })
         "emoji" -> EmojiPickerDialog(EMOJIS, s.titleEmoji, onPick = { e -> vm.launch { setTitleEmoji(e) } }, onDismiss = { dialog = null })
         "accent" -> com.hazagou.spectra.ui.components.ColorPickerDialog(
             title = "Cor de destaque", colors = Spectra.ColorGrid, initial = s.accent, initialLum = s.accentLum,

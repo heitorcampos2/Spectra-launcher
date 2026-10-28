@@ -38,6 +38,7 @@ class TvContentRepository(private val context: Context) {
 
     companion object {
         const val PERMISSION_READ_EPG = "com.android.providers.tv.permission.READ_EPG_DATA"
+        const val PERMISSION_READ_LISTINGS = "android.permission.READ_TV_LISTINGS"
         private const val AUTHORITY = "android.media.tv"
         val CHANNELS: Uri = Uri.parse("content://$AUTHORITY/channel")
         val PREVIEW_PROGRAMS: Uri = Uri.parse("content://$AUTHORITY/preview_program")
@@ -83,9 +84,21 @@ class TvContentRepository(private val context: Context) {
     val diagnostics = kotlinx.coroutines.flow.MutableStateFlow<Diagnostics?>(null)
 
     private fun listingsState(): String = runCatching {
-        context.packageManager.getPermissionInfo("android.permission.READ_TV_LISTINGS", 0)
-        if (ContextCompat.checkSelfPermission(context, "android.permission.READ_TV_LISTINGS") == PackageManager.PERMISSION_GRANTED) "concedida" else "negada"
+        val info = context.packageManager.getPermissionInfo(PERMISSION_READ_LISTINGS, 0)
+        if (hasListingsPermission) "✔ concedida"
+        else {
+            val dangerous = if (android.os.Build.VERSION.SDK_INT >= 28) info.protection == android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+            else (info.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE) == android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+            if (dangerous) "✕ negada — toque em \"Liberar canais dos apps\"" else "✕ negada — esta TV só libera pelo computador (ADB)"
+        }
     }.getOrDefault("não existe neste Android")
+
+    /** Sem ela o Android só mostra ao Spectra os canais do próprio Spectra (motivo dos "0 canais"). */
+    val listingsExists: Boolean
+        get() = runCatching { context.packageManager.getPermissionInfo(PERMISSION_READ_LISTINGS, 0); true }.getOrDefault(false)
+    val hasListingsPermission: Boolean
+        get() = ContextCompat.checkSelfPermission(context, PERMISSION_READ_LISTINGS) == PackageManager.PERMISSION_GRANTED
+    val needsListings: Boolean get() = hasProvider && listingsExists && !hasListingsPermission
 
     private var rawChannels = 0
     private var rawPreview = 0

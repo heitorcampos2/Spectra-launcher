@@ -184,8 +184,12 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
                     currentFocus = railFocus,
                     onJump = { jumpTo(it) },
                     onConfigure = { id -> vm.sectionPanel.value = id },
-                    onMove = { id -> vm.movingSection.value = if (vm.movingSection.value == id) null else id },
-                    onMoveDelta = { id, d -> vm.sectionsDo { move(id, d) } },
+                    onMove = { id ->
+                        val start = vm.movingSection.value != id
+                        vm.movingSection.value = if (start) id else null
+                        toast(context, if (start) "↑ ↓ mudam a posição da seção • OK confirma" else "Posição salva ✔")
+                    },
+                    onMoveDelta = { id, d -> vm.moveSectionVisible(id, d) },
                 )
             }
         }
