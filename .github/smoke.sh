@@ -75,7 +75,7 @@ adb shell input keyevent KEYCODE_DPAD_RIGHT
 shot 10-cabecalhos-ocultos 2
 
 # Canais: um app de teste publica canais/programas/ver a seguir (como o Sintonia) e o Spectra precisa mostrá-los
-adb install -r apk/publisher/*.apk >> shots/install.txt 2>&1
+adb install -r -g apk/publisher/*.apk >> shots/install.txt 2>&1
 adb shell am start -W -n com.hazagou.spectra.testpublisher/.PublishActivity
 sleep 6
 adb shell am force-stop $PKG
