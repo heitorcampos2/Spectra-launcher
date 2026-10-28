@@ -116,6 +116,7 @@ object AdbLocal {
         if (connected) return true
         status.value = Status.CONNECTING
         lastError.value = null
+        Log.i(TAG, "conectando ao adbd local…")
         return try {
             val s = Socket()
             s.connect(InetSocketAddress("127.0.0.1", 5555), 1500)
@@ -131,6 +132,7 @@ object AdbLocal {
             s.soTimeout = 60_000 // tempo para a pessoa aceitar o diálogo na TV
             while (true) {
                 val m = read(input)
+                Log.i(TAG, "recebido cmd=%08x arg0=%d".format(m.cmd, m.arg0))
                 when (m.cmd) {
                     A_AUTH -> if (m.arg0 == AUTH_TOKEN) {
                         if (!sentSignature) {
@@ -163,6 +165,7 @@ object AdbLocal {
     }
 
     private fun fail(st: Status, msg: String): Boolean {
+        Log.w(TAG, "falha: $st — $msg")
         disconnect()
         status.value = st
         lastError.value = msg

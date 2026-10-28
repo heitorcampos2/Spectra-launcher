@@ -114,6 +114,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
             "remote" -> vm.remotePairOpen.value = true
             "updates" -> vm.openSettings("UPDATES")
             "wallpaper" -> vm.open(Screen.WALLPAPER)
+            "home" -> vm.goHome()
         }
     }
 

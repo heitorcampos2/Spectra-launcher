@@ -67,9 +67,8 @@ adb shell input keyevent KEYCODE_DPAD_CENTER
 shot 08-wallpapers-classificacao 10
 
 # Cabeçalhos: ← no primeiro cartão mostra a coluna
-adb shell input keyevent KEYCODE_HOME
-adb shell am start -W -n $ACT
-sleep 3
+adb shell am start -W -n $ACT --es open home
+sleep 4
 adb shell input keyevent KEYCODE_DPAD_LEFT
 shot 09-cabecalhos-visiveis 2
 adb shell input keyevent KEYCODE_DPAD_RIGHT
@@ -80,8 +79,10 @@ shot 10-cabecalhos-ocultos 2
   echo "== props"; adb shell getprop ro.adb.secure; adb shell getprop service.adb.tcp.port; adb shell getprop ro.build.type
 } >> shots/servidor.txt 2>&1
 adb tcpip 5555 >> shots/servidor.txt 2>&1
-sleep 6
+sleep 8
 adb wait-for-device
+sleep 3
+{ echo "== portas TCP em escuta (5555=15B3)"; adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i ':15B3'"; } >> shots/servidor.txt 2>&1
 adb shell am force-stop $PKG
 echo "<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><boolean name=\"enabled\" value=\"true\" /></map>" > /tmp/adb.xml
 adb push /tmp/adb.xml /data/local/tmp/adb.xml
@@ -89,9 +90,23 @@ adb shell "cat /data/local/tmp/adb.xml | run-as $PKG sh -c 'cat > shared_prefs/s
 adb shell am start -W -n $ACT
 sleep 6
 shot 11-autorizacao-adb 1
-# tenta aceitar o diálogo "Permitir depuração" (marca "sempre permitir" e confirma)
-adb shell input keyevent KEYCODE_DPAD_DOWN; adb shell input keyevent KEYCODE_DPAD_CENTER
-adb shell input keyevent KEYCODE_TAB; adb shell input keyevent KEYCODE_DPAD_RIGHT; adb shell input keyevent KEYCODE_DPAD_CENTER
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml > shots/ui-autorizacao.xml 2>/dev/null
+# aceita o diálogo "Permitir depuração": marca "sempre permitir" e toca em Permitir/OK (pelas coordenadas do dump)
+python3 - <<'PY' > /tmp/taps.txt
+import re
+try:
+    x=open('shots/ui-autorizacao.xml',encoding='utf-8',errors='ignore').read()
+except Exception: x=''
+def center(pattern):
+    m=re.search(r'<node[^>]*(?:text|resource-id)="[^"]*(?:%s)[^"]*"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"'%pattern,x,re.I)
+    if not m: return None
+    a,b,c,d=map(int,m.groups()); return f"{(a+c)//2} {(b+d)//2}"
+for p in ['Always allow|Sempre permitir|alwaysUse','button1|^Allow$|Permitir|OK']:
+    c=center(p)
+    if c: print(c)
+PY
+cat /tmp/taps.txt >> shots/servidor.txt
+while read -r X Y; do adb shell input tap $X $Y; sleep 1; done < /tmp/taps.txt
 sleep 4
 adb forward tcp:8642 tcp:8642
 adb shell am start -W -a android.settings.SETTINGS
