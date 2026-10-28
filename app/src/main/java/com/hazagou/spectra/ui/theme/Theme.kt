@@ -110,8 +110,8 @@ fun LauncherSettings.toUiConfig(dynamicAccent: Color?): UiConfig {
         animations = performance != PerformanceMode.MAX_PERFORMANCE,
         highQualityImages = performance == PerformanceMode.MAX_QUALITY,
         showLabels = showLabels,
-        surface = Color(surfaceTone.argb),
-        surfaceHigh = Color(surfaceTone.high),
+        surface = if (menuColor != 0L) Color(menuColor).copy(alpha = 0.80f) else Color(surfaceTone.argb),
+        surfaceHigh = if (menuColor != 0L) adjust(Color(menuColor), 8).copy(alpha = 0.92f) else Color(surfaceTone.high),
     )
 }
 

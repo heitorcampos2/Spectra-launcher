@@ -27,7 +27,7 @@ data class WallpaperItem(
 data class WallCategory(val id: String, val label: String, val emoji: String, val query: String?)
 
 enum class WallSource(val label: String) {
-    CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers")
+    CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers"), SLIDESHOW("Apresentação")
 }
 
 /** Classificação dos wallpapers (acervo público Wallhaven, só conteúdo seguro, proporção de TV). */

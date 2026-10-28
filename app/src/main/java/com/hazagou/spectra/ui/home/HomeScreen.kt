@@ -221,8 +221,9 @@ fun TitleBlock(settings: LauncherSettings, modifier: Modifier = Modifier) {
         Text(
             settings.title,
             style = MaterialTheme.typography.displaySmall.copy(
-                brush = Brush.linearGradient(listOf(Color.White, ui.accent, Spectra.Lilac)),
-                shadow = Shadow(ui.accent.copy(alpha = 0.6f), Offset(0f, 2f), 18f)
+                brush = if (settings.titleColor != 0L) Brush.linearGradient(listOf(Color(settings.titleColor), Color(settings.titleColor)))
+                else Brush.linearGradient(listOf(Color.White, ui.accent, Spectra.Lilac)),
+                shadow = Shadow((if (settings.titleColor != 0L) Color(settings.titleColor) else ui.accent).copy(alpha = 0.6f), Offset(0f, 2f), 18f)
             ),
             maxLines = 1, overflow = TextOverflow.Ellipsis
         )

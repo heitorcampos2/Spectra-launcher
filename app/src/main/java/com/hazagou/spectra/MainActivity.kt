@@ -226,7 +226,9 @@ class MainActivity : ComponentActivity(), LauncherActions {
                         modifier = Modifier.graphicsLayer { alpha = contentAlpha },
                         targetState = screen,
                         transitionSpec = {
-                            if (ui.animations) (fadeIn(tween(260)) + scaleIn(tween(260), initialScale = 0.97f)) togetherWith fadeOut(tween(180))
+                            if (ui.animations) (fadeIn(tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+                                scaleIn(tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing), initialScale = 0.985f)) togetherWith
+                                fadeOut(tween(260))
                             else fadeIn(tween(0)) togetherWith fadeOut(tween(0))
                         },
                         label = "screen"

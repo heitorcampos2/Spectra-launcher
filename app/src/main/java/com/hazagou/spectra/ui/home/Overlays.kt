@@ -95,6 +95,14 @@ fun SidePanel(vm: MainViewModel, settings: LauncherSettings, actions: LauncherAc
                     item { OptionRow("Editar seções", "☰") { vm.open(Screen.SECTIONS) } }
                     item { OptionRow("Editar canais", "📺") { vm.sidePanelOpen.value = false; vm.channelsOpen.value = true } }
                     item { OptionRow("Personalizar Spectra", "✦") { vm.open(Screen.SETTINGS) } }
+                    item {
+                        val modes = com.hazagou.spectra.data.PerformanceMode.entries
+                        OptionRow("Desempenho", "⚡", value = settings.performance.label) {
+                            val next = modes[(modes.indexOf(settings.performance) + 1).mod(modes.size)]
+                            vm.launch { setPerformance(next) }
+                            com.hazagou.spectra.ui.home.toast(ctx, "Desempenho: ${next.label}")
+                        }
+                    }
                     item { OptionRow("Wallpapers", "🖼") { vm.open(Screen.WALLPAPER) } }
                     item { OptionRow("Configurações do Android", "⚙") { runShortcut(ShortcutKind.ANDROID_SETTINGS, vm) } }
                     item { GroupTitle("Controle remoto") }

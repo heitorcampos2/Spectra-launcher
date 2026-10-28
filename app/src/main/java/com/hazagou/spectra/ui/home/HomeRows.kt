@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -84,7 +85,15 @@ import com.hazagou.spectra.ui.theme.Spectra
 import kotlinx.coroutines.delay
 
 /** "Linha deslizante": o item focado fica sempre no início da fileira (estilo Projectivy). */
+/** Rolagem vertical entre seções com animação suave (sem mola). */
+private object SmoothScrollSpec : BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> =
+        androidx.compose.animation.core.tween(520, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+}
+
 private class PivotSpec(private val startPx: Float) : BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> =
+        androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - startPx
 }
 
@@ -144,7 +153,16 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
         var target = focusedRow
         if (target > 0 && rows[target - 1] is HomeRowModel.ContentHeader) target -= 1
         val peek = if (settings.hideRowsAbove || target == 0) 0 else with(density) { -64.dp.roundToPx() }
-        runCatching { listState.animateScrollToItem(target, peek) }
+        // rolagem suave e contínua até a fileira (desacelera no fim), sem "saltos"
+        runCatching {
+            val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
+            if (info != null) {
+                listState.animateScrollBy(
+                    (info.offset + peek).toFloat(),
+                    androidx.compose.animation.core.tween(560, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+                )
+            } else listState.animateScrollToItem(target, peek)
+        }
     }
 
     val showTop = !(settings.hideStatusOnScroll && focusedRow > 0)
@@ -198,6 +216,7 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
             AnimatedVisibility(visible = showTop, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                 Box(Modifier.onFocusChanged { if (it.hasFocus) focusedRow = -1 }) { TopBar(vm, settings) }
             }
+            CompositionLocalProvider(LocalBringIntoViewSpec provides SmoothScrollSpec) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -211,7 +230,7 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
                         settings.hideRowsAbove && idx < focusedRow -> 0f
                         else -> settings.unselectedRowAlpha
                     }
-                    val alpha by animateFloatAsState(target, label = "rowAlpha")
+                    val alpha by animateFloatAsState(target, androidx.compose.animation.core.tween(520, easing = androidx.compose.animation.core.FastOutSlowInEasing), label = "rowAlpha")
                     val isMovingSec = movingSection != null && row.sectionId() == movingSection
                     Box(
                         Modifier
@@ -248,6 +267,7 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
                         modifier = Modifier.padding(start = settings.startMargin.dp, top = 24.dp)
                     )
                 }
+            }
             }
         }
         }

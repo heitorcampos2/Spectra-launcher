@@ -150,7 +150,7 @@ fun SettingsScreen(vm: MainViewModel, settings: LauncherSettings, actions: Launc
         // --------------------------------------------------- direita: lista / opções
         Box(
             Modifier.weight(0.5f).fillMaxHeight()
-                .background(Brush.horizontalGradient(listOf(Color(0x99100C2E), Color(0xE6100C2E))))
+                .background(Brush.horizontalGradient(listOf(LocalUi.current.surface.copy(alpha = 0.55f), LocalUi.current.surfaceHigh)))
         ) {
             AnimatedContent(
                 targetState = cat,
@@ -425,6 +425,11 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 }
                 item { SettingRow("Cor de fundo 1", "#%06X".format(s.bgColor1 and 0xFFFFFFL), "Usada no fundo sólido e no início do degradê") { dialog = "bg1" } }
                 item { SettingRow("Cor de fundo 2", "#%06X".format(s.bgColor2 and 0xFFFFFFL), "Final do degradê") { dialog = "bg2" } }
+                item { Group("Menus e título") }
+                item { SettingRow("Cor dos menus e painéis", if (s.menuColor == 0L) "Pelo tom (abaixo)" else "#%06X".format(s.menuColor and 0xFFFFFFL),
+                    "Fundo do menu lateral, configurações, diálogos e cartões") { dialog = "menuColor" } }
+                item { SettingRow("Cor do título da tela inicial", if (s.titleColor == 0L) "Degradê automático" else "#%06X".format(s.titleColor and 0xFFFFFFL),
+                    "Texto \"${s.title}\" no topo da tela inicial") { dialog = "titleColor" } }
                 item { Group("Painéis e cartões") }
                 item {
                     SettingRow("Tom dos painéis", s.surfaceTone.label, "Cor de fundo dos cartões, menus e painéis laterais",
@@ -643,6 +648,14 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
             if (com.hazagou.spectra.ui.remote.applyPin(vm, ctx, p)) vm.remotePairOpen.value = true
         }, onDismiss = { dialog = null })
         "tvName" -> TextEditDialog("Nome desta TV", remoteCfg.tvName, onSave = { t -> vm.remote.setTvName(t.trim().take(30)) }, onDismiss = { dialog = null })
+        "menuColor" -> com.hazagou.spectra.ui.components.ColorPickerDialog(
+            title = "Cor dos menus (✕ = usar o tom do painel)", colors = Spectra.BackgroundGrid + Spectra.ColorGrid.take(32),
+            initial = if (s.menuColor != 0L) s.menuColor else 0xFF17154FL, initialAuto = s.menuColor == 0L, showAdjustments = false, allowAuto = true,
+            onConfirm = { c, _, _, auto -> vm.launch { setMenuColor(if (auto) 0L else c) } }, onDismiss = { dialog = null })
+        "titleColor" -> com.hazagou.spectra.ui.components.ColorPickerDialog(
+            title = "Cor do título (✕ = degradê automático)", colors = Spectra.ColorGrid,
+            initial = if (s.titleColor != 0L) s.titleColor else 0xFFFFFFFFL, initialAuto = s.titleColor == 0L, showAdjustments = false, allowAuto = true,
+            onConfirm = { c, _, _, auto -> vm.launch { setTitleColor(if (auto) 0L else c) } }, onDismiss = { dialog = null })
         "hex" -> TextEditDialog("Cor personalizada (#RRGGBB)", "#%06X".format(s.accent and 0xFFFFFFL), onSave = { t ->
             val hex = t.trim().removePrefix("#")
             val v = hex.takeIf { it.length == 6 }?.toLongOrNull(16)

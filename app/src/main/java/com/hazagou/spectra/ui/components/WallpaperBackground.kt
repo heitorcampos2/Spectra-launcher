@@ -72,8 +72,13 @@ fun WallpaperBackground(
     val file = settings.wallpaperPath?.takeIf { settings.bgMode == com.hazagou.spectra.data.BgMode.WALLPAPER }
         ?.let { File(it) }?.takeIf { it.exists() }
     val animations = settings.performance != PerformanceMode.MAX_PERFORMANCE
-    val useParallax = animations && (settings.wallpaperMotion == WallpaperMotion.PARALLAX || settings.wallpaperMotion == WallpaperMotion.PARALLAX_DRIFT)
-    val useDrift = animations && (settings.wallpaperMotion == WallpaperMotion.DRIFT || settings.wallpaperMotion == WallpaperMotion.PARALLAX_DRIFT)
+    val motion = settings.wallpaperMotion
+    val useParallax = animations && motion in setOf(WallpaperMotion.PARALLAX, WallpaperMotion.PARALLAX_DRIFT, WallpaperMotion.PARALLAX_KEN_BURNS)
+    val useDrift = animations && motion in setOf(WallpaperMotion.DRIFT, WallpaperMotion.PARALLAX_DRIFT)
+    val kenBurns = animations && motion in setOf(WallpaperMotion.KEN_BURNS, WallpaperMotion.PARALLAX_KEN_BURNS)
+    val breathe = animations && motion == WallpaperMotion.BREATHE
+    val pan = animations && motion == WallpaperMotion.PAN
+    val floating = animations && motion == WallpaperMotion.FLOAT
 
     // Cor de destaque automática a partir do wallpaper
     LaunchedEffect(file?.path, file?.lastModified()) {
@@ -102,6 +107,11 @@ fun WallpaperBackground(
         animationSpec = infiniteRepeatable(tween(48_000, easing = LinearEasing), RepeatMode.Reverse),
         label = "drift"
     )
+    val smooth = androidx.compose.animation.core.FastOutSlowInEasing
+    val kbS = if (kenBurns) transition.animateFloat(0f, 1f, infiniteRepeatable(tween(60_000, easing = smooth), RepeatMode.Reverse), label = "kb") else null
+    val brS = if (breathe) transition.animateFloat(0f, 1f, infiniteRepeatable(tween(9_000, easing = smooth), RepeatMode.Reverse), label = "br") else null
+    val pnS = if (pan) transition.animateFloat(0f, 1f, infiniteRepeatable(tween(70_000, easing = smooth), RepeatMode.Reverse), label = "pn") else null
+    val flS = if (floating) transition.animateFloat(0f, 1f, infiniteRepeatable(tween(24_000, easing = LinearEasing)), label = "fl") else null
     val baseScale = when {
         useParallax && useDrift -> 1.16f
         useParallax -> 1.12f
@@ -117,6 +127,24 @@ fun WallpaperBackground(
             scaleY = baseScale + extra
             translationX = pOffset.x + if (useDrift) (d - 0.5f) * 40f * dpScale else 0f
             translationY = pOffset.y + if (useDrift) sin(d * PI.toFloat()) * 14f * dpScale else 0f
+            val kb = kbS?.value ?: 0f
+            val br = brS?.value ?: 0f
+            val pn = pnS?.value ?: 0f
+            val fl = flS?.value ?: 0f
+            if (kenBurns) {
+                val sc = (if (useParallax) 1.14f else 1.06f) + 0.14f * kb
+                scaleX = sc; scaleY = sc
+                translationX = pOffset.x + (kb - 0.5f) * 70f * dpScale
+                translationY = pOffset.y + (0.5f - kb) * 34f * dpScale
+            }
+            if (breathe) { val sc = 1.04f + 0.07f * br; scaleX = sc; scaleY = sc }
+            if (pan) { scaleX = 1.24f; scaleY = 1.24f; translationX = (pn - 0.5f) * size.width * 0.18f }
+            if (floating) {
+                val a = fl * 2f * PI.toFloat()
+                scaleX = 1.09f; scaleY = 1.09f
+                translationX = sin(a) * 22f * dpScale
+                translationY = sin(a * 2f) * 12f * dpScale
+            }
         }
         val ext = file?.extension?.lowercase().orEmpty()
         if (file != null && ext in setOf("mp4", "mkv", "webm", "3gp", "mov")) {
@@ -165,7 +193,7 @@ fun WallpaperBackground(
             else -> DefaultArtBackground(layerMod)
         }
 
-        if (settings.particles && animations) Particles(Modifier.fillMaxSize())
+        if (settings.particles && animations) Particles(settings.particleStyle, Color(settings.accent), Modifier.fillMaxSize())
 
         // Escurecimento para legibilidade
         Box(
@@ -263,20 +291,73 @@ fun DefaultArtBackground(modifier: Modifier) {
 private class Particle(val x: Float, val y: Float, val r: Float, val speed: Float, val phase: Float, val alpha: Float)
 
 @Composable
-private fun Particles(modifier: Modifier) {
-    val particles = remember {
+private fun Particles(style: com.hazagou.spectra.data.ParticleStyle, accent: Color, modifier: Modifier) {
+    val count = when (style) {
+        com.hazagou.spectra.data.ParticleStyle.BOKEH -> 16
+        com.hazagou.spectra.data.ParticleStyle.FIREFLIES -> 22
+        com.hazagou.spectra.data.ParticleStyle.RAIN -> 70
+        com.hazagou.spectra.data.ParticleStyle.STARS -> 90
+        else -> 50
+    }
+    val particles = remember(style) {
         val rnd = Random(7)
-        List(46) { Particle(rnd.nextFloat(), rnd.nextFloat(), 0.6f + rnd.nextFloat() * 2.2f, 0.2f + rnd.nextFloat() * 0.8f, rnd.nextFloat(), 0.25f + rnd.nextFloat() * 0.6f) }
+        List(count) { Particle(rnd.nextFloat(), rnd.nextFloat(), 0.6f + rnd.nextFloat() * 2.2f, 0.2f + rnd.nextFloat() * 0.8f, rnd.nextFloat(), 0.25f + rnd.nextFloat() * 0.6f) }
     }
     val transition = rememberInfiniteTransition(label = "particles")
     val t by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "t")
+    val twoPi = 2f * PI.toFloat()
     Canvas(modifier) {
         val time = t // lido só na fase de desenho → sem recomposição
         for (p in particles) {
-            val yy = ((p.y - time * p.speed * 3f) % 1f + 1f) % 1f
-            val xx = p.x + sin((time * 12f + p.phase) * 2f * PI.toFloat()) * 0.01f
-            val tw = 0.6f + 0.4f * sin((time * 40f + p.phase) * 2f * PI.toFloat())
-            drawCircle(Color.White.copy(alpha = p.alpha * tw), p.r * density, Offset(xx * size.width, yy * size.height))
+            when (style) {
+                com.hazagou.spectra.data.ParticleStyle.DOTS -> {
+                    val yy = ((p.y - time * p.speed * 3f) % 1f + 1f) % 1f
+                    val xx = p.x + sin((time * 12f + p.phase) * twoPi) * 0.01f
+                    val tw = 0.6f + 0.4f * sin((time * 40f + p.phase) * twoPi)
+                    drawCircle(Color.White.copy(alpha = p.alpha * tw), p.r * density, Offset(xx * size.width, yy * size.height))
+                }
+                com.hazagou.spectra.data.ParticleStyle.SNOW -> {
+                    val yy = ((p.y + time * (4f + p.speed * 6f)) % 1f + 1f) % 1f
+                    val xx = p.x + sin((time * 18f + p.phase) * twoPi) * 0.02f
+                    drawCircle(Color.White.copy(alpha = 0.35f + p.alpha * 0.5f), (1.2f + p.r) * density, Offset(xx * size.width, yy * size.height))
+                }
+                com.hazagou.spectra.data.ParticleStyle.STARS -> {
+                    val tw = (0.5f + 0.5f * sin((time * (30f + p.speed * 40f) + p.phase) * twoPi)).let { it * it }
+                    val c = Offset(p.x * size.width, p.y * size.height * 0.75f)
+                    val r = (0.5f + p.r * 0.6f) * density
+                    drawCircle(Color.White.copy(alpha = 0.15f + 0.85f * tw * p.alpha), r, c)
+                    if (p.r > 2.2f) {
+                        val l = r * 5f * tw
+                        drawLine(Color.White.copy(alpha = 0.5f * tw), Offset(c.x - l, c.y), Offset(c.x + l, c.y), strokeWidth = 1f)
+                        drawLine(Color.White.copy(alpha = 0.5f * tw), Offset(c.x, c.y - l), Offset(c.x, c.y + l), strokeWidth = 1f)
+                    }
+                }
+                com.hazagou.spectra.data.ParticleStyle.BOKEH -> {
+                    val xx = (p.x + sin((time * 3f + p.phase) * twoPi) * 0.05f) * size.width
+                    val yy = (p.y + sin((time * 2f + p.phase * 2f) * twoPi) * 0.04f) * size.height
+                    val r = (28f + p.r * 26f) * density
+                    val col = if (p.phase > 0.5f) accent else Color.White
+                    drawCircle(
+                        Brush.radialGradient(listOf(col.copy(alpha = 0.16f * p.alpha + 0.04f), Color.Transparent), Offset(xx, yy), r),
+                        r, Offset(xx, yy)
+                    )
+                }
+                com.hazagou.spectra.data.ParticleStyle.FIREFLIES -> {
+                    val xx = (p.x + sin((time * (6f + p.speed * 4f) + p.phase) * twoPi) * 0.06f) * size.width
+                    val yy = (p.y * 0.6f + 0.35f + sin((time * (5f + p.speed * 3f) + p.phase * 3f) * twoPi) * 0.05f) * size.height
+                    val glow = (0.5f + 0.5f * sin((time * 50f + p.phase) * twoPi)).let { it * it }
+                    val c = Color(0xFFE6FF7A)
+                    drawCircle(Brush.radialGradient(listOf(c.copy(alpha = 0.55f * glow), Color.Transparent), Offset(xx, yy), 14f * density), 14f * density, Offset(xx, yy))
+                    drawCircle(c.copy(alpha = 0.9f * glow), 1.6f * density, Offset(xx, yy))
+                }
+                com.hazagou.spectra.data.ParticleStyle.RAIN -> {
+                    val yy = ((p.y + time * (60f + p.speed * 40f)) % 1f + 1f) % 1f
+                    val x0 = p.x * size.width
+                    val y0 = yy * size.height
+                    val len = (14f + p.r * 8f) * density
+                    drawLine(Color.White.copy(alpha = 0.12f + p.alpha * 0.25f), Offset(x0, y0), Offset(x0 - len * 0.25f, y0 + len), strokeWidth = 1.2f * density)
+                }
+            }
         }
     }
 }

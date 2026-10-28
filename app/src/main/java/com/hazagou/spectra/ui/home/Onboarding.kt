@@ -91,6 +91,23 @@ fun OnboardingDialog(vm: MainViewModel, actions: LauncherActions, onFinish: () -
                 modifier = focusFor(3),
                 button = "Abrir Acessibilidade", onClick = { actions.openAccessibilitySettings() },
             )
+            // Desempenho: começa em Equilibrado; TVs/TV box mais simples devem usar Máximo desempenho
+            val st by vm.settings.collectAsState()
+            val perf = st?.performance ?: com.hazagou.spectra.data.PerformanceMode.BALANCED
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0x33F59E0B)).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("⚡ Desempenho: ${perf.label}", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text("O Spectra vem em Equilibrado. Se a TV ou TV box ficar lenta (travando ao navegar), escolha Máximo desempenho. " +
+                    "TVs potentes podem usar Máxima qualidade (4K). Dá para mudar depois em MENU ☰ › Desempenho.",
+                    color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    com.hazagou.spectra.data.PerformanceMode.entries.forEach { m ->
+                        PillButton(m.label, selected = m == perf, leading = if (m == perf) "✔" else null) { vm.launch { setPerformance(m) } }
+                    }
+                }
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 4.dp)) {
             PillButton(if (done == 4) "Concluir" else "Continuar depois", leading = "✔", selected = done == 4,

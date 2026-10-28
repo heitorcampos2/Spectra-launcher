@@ -273,17 +273,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        // Troca automática de wallpaper
+        // Troca automática de wallpaper: apresentação (wallpapers marcados) ou troca por categoria/salvos
         viewModelScope.launch {
-            settingsRepo.settings.map { it.rotationMinutes to it.rotationSource }.distinctUntilChanged().collectLatest { (minutes, source) ->
-                if (minutes <= 0) return@collectLatest
-                while (true) {
-                    delay(minutes * 60_000L)
-                    val cur = settings.value?.wallpaperPath
-                    val next = wallRepo.nextForRotation(source, cur) ?: continue
-                    settingsRepo.setWallpaperPath(next.absolutePath)
+            data class Rot(val slide: Boolean, val seconds: Int, val files: List<String>, val shuffle: Boolean, val minutes: Int, val source: String)
+            settingsRepo.settings.map { Rot(it.slideshowEnabled, it.slideshowSeconds, it.slideshowFiles, it.slideshowShuffle, it.rotationMinutes, it.rotationSource) }
+                .distinctUntilChanged().collectLatest { r ->
+                    if (r.slide && r.files.size >= 2) {
+                        while (true) {
+                            delay(r.seconds * 1000L)
+                            val list = r.files.filter { java.io.File(it).exists() }
+                            if (list.size < 2) continue
+                            val cur = settings.value?.wallpaperPath
+                            val next = if (r.shuffle) list.filter { it != cur }.random()
+                            else list[(list.indexOf(cur) + 1).mod(list.size)]
+                            settingsRepo.setWallpaperPath(next)
+                        }
+                    }
+                    if (r.minutes <= 0) return@collectLatest
+                    while (true) {
+                        delay(r.minutes * 60_000L)
+                        val cur = settings.value?.wallpaperPath
+                        val next = wallRepo.nextForRotation(r.source, cur) ?: continue
+                        settingsRepo.setWallpaperPath(next.absolutePath)
+                    }
                 }
-            }
         }
     }
 

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -132,7 +133,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                     WallSource.CATEGORIES -> repo.byCategory(cat, pg + 1)
                     WallSource.RANKED -> repo.ranked(rk, rs, th, pg + 1)
                     WallSource.GOOGLE -> repo.searchGoogle(q, pg, settings.googleApiKey, settings.googleCx, hq)
-                    WallSource.SAVED -> emptyList()
+                    WallSource.SAVED, WallSource.SLIDESHOW -> emptyList()
                 }
                 val known = results.map { it.id }.toSet()
                 results.addAll(list.filter { it.id !in known })
@@ -176,7 +177,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
 
     LaunchedEffect(source, category, rank, res, theme) {
         if (source == WallSource.CATEGORIES || source == WallSource.RANKED) load(true)
-        if (source == WallSource.SAVED) savedFiles = repo.saved()
+        if (source == WallSource.SAVED || source == WallSource.SLIDESHOW) savedFiles = repo.saved()
     }
     LaunchedEffect(Unit) { delay(80); runCatching { firstTab.requestFocus() } }
 
@@ -195,7 +196,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                         PillButton(
                             s.label,
                             modifier = if (i == 0) Modifier.focusRequester(firstTab) else Modifier,
-                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.RANKED -> "🏆"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾" },
+                            leading = when (s) { WallSource.CATEGORIES -> "🗂"; WallSource.RANKED -> "🏆"; WallSource.GOOGLE -> "🔎"; WallSource.SAVED -> "💾"; WallSource.SLIDESHOW -> "🎞" },
                             selected = source == s
                         ) { source = s; webMode = false; if (s == WallSource.GOOGLE) { results.clear(); error = null } }
                     }
@@ -279,6 +280,44 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                     }
                 }
                 WallSource.SAVED -> Spacer(Modifier.height(12.dp))
+                WallSource.SLIDESHOW -> {
+                    val opts = listOf(15, 30, 60, 120, 300, 600, 1800, 3600)
+                    fun fmt(sec: Int) = if (sec < 60) "$sec s" else if (sec < 3600) "${sec / 60} min" else "${sec / 3600} h"
+                    val selected = settings.slideshowFiles.filter { p -> savedFiles.any { it.absolutePath == p } }
+                    LazyRow(
+                        Modifier.fillMaxWidth().focusRestorer(),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 16.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        item {
+                            PillButton(if (settings.slideshowEnabled) "Apresentação: LIGADA" else "Apresentação: DESLIGADA", leading = "🎞", selected = settings.slideshowEnabled) {
+                                if (!settings.slideshowEnabled && selected.size < 2) toast(context, "Marque pelo menos 2 wallpapers (OK em cada um)")
+                                else scope.launch { vm.settingsRepo.setSlideshowEnabled(!settings.slideshowEnabled) }
+                            }
+                        }
+                        item {
+                            PillButton("Trocar a cada ${fmt(settings.slideshowSeconds)}", leading = "⏱") {
+                                val i = opts.indexOf(settings.slideshowSeconds)
+                                scope.launch { vm.settingsRepo.setSlideshowSeconds(opts[(i + 1).mod(opts.size)]) }
+                            }
+                        }
+                        item {
+                            PillButton(if (settings.slideshowShuffle) "Ordem: aleatória" else "Ordem: em sequência", leading = "🔀", selected = settings.slideshowShuffle) {
+                                scope.launch { vm.settingsRepo.setSlideshowShuffle(!settings.slideshowShuffle) }
+                            }
+                        }
+                        item {
+                            PillButton("Marcar todos", leading = "☑") {
+                                scope.launch { vm.settingsRepo.setSlideshowFiles(savedFiles.filterNot { repo.isVideo(it) }.map { it.absolutePath }) }
+                            }
+                        }
+                        item { PillButton("Limpar", leading = "☐") { scope.launch { vm.settingsRepo.setSlideshowFiles(emptyList()); vm.settingsRepo.setSlideshowEnabled(false) } } }
+                    }
+                    Text(
+                        "OK marca/desmarca • ${selected.size} selecionados • a transição usa o efeito escolhido em Personalizar › Fundo",
+                        color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 56.dp)
+                    )
+                }
             }
 
             // ---------------- grade
@@ -290,7 +329,23 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                if (source == WallSource.SAVED) {
+                if (source == WallSource.SLIDESHOW) {
+                    val imgs = savedFiles.filterNot { repo.isVideo(it) }
+                    items(imgs, key = { "s_" + it.path }) { f ->
+                        val on = f.absolutePath in settings.slideshowFiles
+                        Thumb(model = f, label = if (on) "Na apresentação" else null, badge = if (repo.isGif(f)) "GIF" else null, checked = on) {
+                            val cur = settings.slideshowFiles.filter { p -> imgs.any { it.absolutePath == p } }
+                            val next = if (on) cur - f.absolutePath else cur + f.absolutePath
+                            scope.launch {
+                                vm.settingsRepo.setSlideshowFiles(next)
+                                if (next.size < 2) vm.settingsRepo.setSlideshowEnabled(false)
+                            }
+                        }
+                    }
+                    if (imgs.isEmpty()) item(span = { GridItemSpan(4) }) {
+                        Text("Escolha wallpapers nas abas Categorias, Classificação ou Google: eles ficam salvos e aparecem aqui para marcar.", color = Spectra.TextSecondary)
+                    }
+                } else if (source == WallSource.SAVED) {
                     items(savedFiles, key = { it.path }) { f ->
                         Thumb(
                             model = f, label = if (f.absolutePath == settings.wallpaperPath) "Em uso" else null,
@@ -365,12 +420,20 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
 }
 
 @Composable
-private fun Thumb(model: Any, label: String?, badge: String?, onClick: () -> Unit) {
+private fun Thumb(model: Any, label: String?, badge: String?, checked: Boolean? = null, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val req = remember(model) { ImageRequest.Builder(ctx).data(model).size(480, 270).crossfade(true).build() }
     FocusCard(Modifier.fillMaxWidth().aspectRatio(16f / 9f), onClick = onClick) { focused ->
         AsyncImage(req, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        if (label != null && (focused || label == "Em uso")) {
+        if (checked != null) {
+            Box(
+                Modifier.align(Alignment.TopStart).padding(8.dp).size(30.dp)
+                    .background(if (checked) LocalUi.current.accent else Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) { if (checked) Text("✔", color = Color.White, style = MaterialTheme.typography.titleSmall) }
+            if (checked) Box(Modifier.fillMaxSize().background(LocalUi.current.accent.copy(alpha = 0.12f)))
+        }
+        if (label != null && (focused || label == "Em uso" || checked == true)) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.8f))))
             Text(label, color = Color.White, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))

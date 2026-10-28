@@ -27,7 +27,22 @@ enum class WallpaperMotion(val label: String) {
     STATIC("Estático"),
     PARALLAX("Parallax (segue o foco)"),
     DRIFT("Movimento suave"),
-    PARALLAX_DRIFT("Parallax + movimento")
+    PARALLAX_DRIFT("Parallax + movimento"),
+    KEN_BURNS("Ken Burns (zoom + panorâmica)"),
+    PARALLAX_KEN_BURNS("Parallax + Ken Burns"),
+    BREATHE("Respiração (zoom lento)"),
+    PAN("Panorâmica lateral"),
+    FLOAT("Flutuar"),
+}
+
+/** Efeito animado por cima do wallpaper. */
+enum class ParticleStyle(val label: String) {
+    DOTS("Pontos de luz"),
+    SNOW("Neve"),
+    STARS("Estrelas cintilantes"),
+    BOKEH("Bokeh"),
+    FIREFLIES("Vaga-lumes"),
+    RAIN("Chuva"),
 }
 
 /** Animação ao trocar de wallpaper (manual ou troca automática). */
@@ -128,6 +143,15 @@ data class LauncherSettings(
     val wallpaperPath: String? = null,
     val wallpaperMotion: WallpaperMotion = WallpaperMotion.PARALLAX_DRIFT,
     val wallTransition: WallTransition = WallTransition.FADE,
+    val particleStyle: ParticleStyle = ParticleStyle.DOTS,
+    // ---- apresentação de slides (wallpapers escolhidos)
+    val slideshowEnabled: Boolean = false,
+    val slideshowSeconds: Int = 60,
+    val slideshowFiles: List<String> = emptyList(),
+    val slideshowShuffle: Boolean = false,
+    // ---- cores extras (0 = automático)
+    val titleColor: Long = 0L,
+    val menuColor: Long = 0L,
     val parallaxStrength: Int = 2,
     val particles: Boolean = true,
     val dim: Float = 0.35f,
@@ -205,6 +229,13 @@ class SettingsRepository(private val context: Context) {
         val wallpaperPath = stringPreferencesKey("wallpaper_path")
         val wallpaperMotion = stringPreferencesKey("wallpaper_motion")
         val wallTransition = stringPreferencesKey("wall_transition")
+        val particleStyle = stringPreferencesKey("particle_style")
+        val slideshowEnabled = booleanPreferencesKey("slideshow_enabled")
+        val slideshowSeconds = intPreferencesKey("slideshow_seconds")
+        val slideshowFiles = stringPreferencesKey("slideshow_files")
+        val slideshowShuffle = booleanPreferencesKey("slideshow_shuffle")
+        val titleColor = longPreferencesKey("title_color")
+        val menuColor = longPreferencesKey("menu_color")
         val parallaxStrength = intPreferencesKey("parallax_strength")
         val particles = booleanPreferencesKey("particles")
         val dim = floatPreferencesKey("dim")
@@ -279,6 +310,13 @@ class SettingsRepository(private val context: Context) {
             wallpaperPath = p[K.wallpaperPath],
             wallpaperMotion = p[K.wallpaperMotion].toEnum(d.wallpaperMotion),
             wallTransition = p[K.wallTransition].toEnum(d.wallTransition),
+            particleStyle = p[K.particleStyle].toEnum(d.particleStyle),
+            slideshowEnabled = p[K.slideshowEnabled] ?: d.slideshowEnabled,
+            slideshowSeconds = p[K.slideshowSeconds] ?: d.slideshowSeconds,
+            slideshowFiles = p[K.slideshowFiles]?.split('\n')?.filter { it.isNotBlank() } ?: d.slideshowFiles,
+            slideshowShuffle = p[K.slideshowShuffle] ?: d.slideshowShuffle,
+            titleColor = p[K.titleColor] ?: d.titleColor,
+            menuColor = p[K.menuColor] ?: d.menuColor,
             parallaxStrength = p[K.parallaxStrength] ?: d.parallaxStrength,
             particles = p[K.particles] ?: d.particles,
             dim = p[K.dim] ?: d.dim,
@@ -368,6 +406,13 @@ class SettingsRepository(private val context: Context) {
     suspend fun setWallpaperPath(v: String?) = edit { if (v == null) it.remove(K.wallpaperPath) else it[K.wallpaperPath] = v }
     suspend fun setWallpaperMotion(v: WallpaperMotion) = edit { it[K.wallpaperMotion] = v.name }
     suspend fun setWallTransition(v: WallTransition) = edit { it[K.wallTransition] = v.name }
+    suspend fun setParticleStyle(v: ParticleStyle) = edit { it[K.particleStyle] = v.name }
+    suspend fun setSlideshowEnabled(v: Boolean) = edit { it[K.slideshowEnabled] = v }
+    suspend fun setSlideshowSeconds(v: Int) = edit { it[K.slideshowSeconds] = v.coerceIn(10, 24 * 3600) }
+    suspend fun setSlideshowFiles(v: List<String>) = edit { it[K.slideshowFiles] = v.joinToString("\n") }
+    suspend fun setSlideshowShuffle(v: Boolean) = edit { it[K.slideshowShuffle] = v }
+    suspend fun setTitleColor(v: Long) = edit { it[K.titleColor] = v }
+    suspend fun setMenuColor(v: Long) = edit { it[K.menuColor] = v }
     suspend fun setParallaxStrength(v: Int) = edit { it[K.parallaxStrength] = v.coerceIn(1, 3) }
     suspend fun setParticles(v: Boolean) = edit { it[K.particles] = v }
     suspend fun setDim(v: Float) = edit { it[K.dim] = v.coerceIn(0f, 0.85f) }
