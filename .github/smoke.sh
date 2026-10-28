@@ -40,15 +40,19 @@ adb forward tcp:8642 tcp:8642
   echo "== pair"; R=$(curl -s -m 5 -X POST -d '{"pin":"1234"}' http://127.0.0.1:8642/api/pair); echo "$R"
   T=$(echo "$R" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
   echo "== sem token"; curl -s -m 5 -X POST "http://127.0.0.1:8642/api/key?k=down"; echo
-  echo "== key back"; curl -s -m 5 -X POST -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/key?k=back"; echo
-  sleep 2
-  echo "== key down"; curl -s -m 5 -X POST -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/key?k=down"; echo
-  echo "== key menu"; curl -s -m 5 -X POST -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/key?k=menu"; echo
+  K() { echo "== key $1"; curl -s -m 5 -X POST -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/key?k=$1"; echo; sleep 1; }
+  K back            # fecha "Definir como padrão?" (diálogo por cima)
+  shot 05a-apos-voltar 2
+  K back            # fecha o diálogo do QR code
+  shot 05b-apos-voltar2 2
+  K down; K down
+  shot 05c-apos-baixo 2
+  K menu
+  shot 05d-apos-menu 2
+  K back
   echo "== apps"; curl -s -m 8 -H "X-Spectra-Token: $T" "http://127.0.0.1:8642/api/apps" | head -c 600; echo
   echo "== web"; curl -s -m 5 http://127.0.0.1:8642/ | head -c 200; echo
 } > shots/servidor.txt 2>&1
-shot 05-apos-comandos 3
-adb shell input keyevent KEYCODE_BACK
 
 adb shell am start -W -n $ACT --es open updates
 shot 06-atualizacoes 8

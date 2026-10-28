@@ -285,6 +285,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun open(s: Screen) {
         sidePanelOpen.value = false
+        remotePairOpen.value = false
         sectionPanel.value = null
         channelsOpen.value = false
         notificationsOpen.value = false

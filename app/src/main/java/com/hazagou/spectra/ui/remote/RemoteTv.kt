@@ -120,8 +120,8 @@ fun RemotePairDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PillButton("Fechar", selected = true, modifier = Modifier.focusRequester(first)) { onDismiss() }
                     PillButton("Trocar PIN", leading = "🔑") { askPin = true }
-                    if (cfg.enabled) PillButton("Desligar", leading = "⏻") { vm.remote.setEnabled(false); onDismiss() }
-                    else PillButton("Ligar", leading = "⏻") { vm.remote.setEnabled(true) }
+                    if (cfg.enabled) PillButton("Desligar", leading = "✕") { vm.remote.setEnabled(false); onDismiss() }
+                    else PillButton("Ligar", leading = "✔") { vm.remote.setEnabled(true) }
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

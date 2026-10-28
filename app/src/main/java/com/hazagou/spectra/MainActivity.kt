@@ -325,7 +325,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
 @Composable
 private fun DialogFrame(content: @Composable () -> Unit) {
     Column(
-        Modifier.width(620.dp).clip(RoundedCornerShape(28.dp)).background(Spectra.SurfaceHigh).padding(30.dp),
+        Modifier.width(760.dp).clip(RoundedCornerShape(28.dp)).background(Spectra.SurfaceHigh).padding(30.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) { content() }
 }
@@ -363,8 +363,10 @@ private fun DefaultLauncherDialog(
                 } else {
                     PillButton("Sim, definir como padrão", leading = "✔", selected = true, modifier = Modifier.focusRequester(fr), onClick = onYes)
                 }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PillButton("Agora não", onClick = onLater)
-                PillButton("Não perguntar", onClick = onNever)
+                PillButton("Não perguntar mais", onClick = onNever)
             }
         }
     }

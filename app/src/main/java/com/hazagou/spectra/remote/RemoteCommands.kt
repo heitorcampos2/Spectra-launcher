@@ -66,8 +66,9 @@ object RemoteCommands {
             return startActivity(ctx, Intent(android.provider.Settings.ACTION_SETTINGS))
         }
 
-        // 1) Spectra na tela → injeta a tecla no próprio launcher
+        // 1) Spectra na tela → injeta a tecla na janela em foco do launcher (inclui diálogos abertos)
         MainActivity.foreground?.get()?.let { act ->
+            if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true)
             if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true)
         }
         // 2) outro app → acessibilidade
@@ -115,6 +116,26 @@ object RemoteCommands {
         audio.dispatchMediaKeyEvent(KeyEvent(t, t + 30, KeyEvent.ACTION_UP, code, 0))
         CommandResult(true)
     }.getOrElse { CommandResult(false, "Mídia indisponível") }
+
+    private val instrumentation by lazy { android.app.Instrumentation() }
+
+    /**
+     * Injeta a tecla como se viesse do controle físico. O Android só permite isso quando a janela
+     * em foco é do próprio Spectra (tela inicial, diálogos, painéis) — é o caso aqui.
+     */
+    private fun injectToOwnWindow(code: Int, long: Boolean): Boolean {
+        if (Looper.myLooper() == Looper.getMainLooper()) return false
+        return runCatching {
+            val t = SystemClock.uptimeMillis()
+            instrumentation.sendKeySync(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0))
+            if (long) {
+                Thread.sleep(550)
+                instrumentation.sendKeySync(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_DOWN, code, 1, 0, -1, 0, KeyEvent.FLAG_LONG_PRESS))
+            }
+            instrumentation.sendKeySync(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+            true
+        }.getOrDefault(false)
+    }
 
     private fun sendToActivity(act: MainActivity, code: Int, long: Boolean): Boolean = runOnMain(false) {
         if (act.isFinishing || act.isDestroyed) return@runOnMain false
