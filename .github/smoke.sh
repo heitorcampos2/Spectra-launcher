@@ -81,7 +81,8 @@ sleep 6
 adb shell am force-stop $PKG
 adb shell am start -W -n $ACT --es open home
 sleep 10
-shot 14-inicio-com-canais 1
+adb shell input keyevent KEYCODE_BACK   # fecha "Definir como padrão?"
+shot 14-inicio-com-canais 2
 adb shell input keyevent KEYCODE_DPAD_DOWN; sleep 1; adb shell input keyevent KEYCODE_DPAD_DOWN
 shot 15-inicio-rolado 2
 adb shell am start -W -n $ACT --es open channels

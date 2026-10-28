@@ -30,8 +30,6 @@ public class PublishActivity extends Activity {
 
     private void publish() {
         ContentResolver cr = getContentResolver();
-        cr.delete(WATCH_NEXT, null, null);
-        cr.delete(CHANNELS, null, null);
         String intent = "intent:#Intent;component=" + getPackageName() + "/.PublishActivity;end";
         long ch1 = channel(cr, "Canal de Teste", intent);
         long ch2 = channel(cr, "Inscrições", intent);
