@@ -1,0 +1,25 @@
+10-28 22:57:42.843  5103  5103 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-28 22:57:42.844  5103  5103 I AndroidRuntime: Using default boot image
+10-28 22:57:42.844  5103  5103 I AndroidRuntime: Leaving lock profiling enabled
+10-28 22:57:42.879  5103  5103 D AndroidRuntime: Calling main entry com.android.commands.content.Content
+10-28 22:57:42.884  5103  5103 D AndroidRuntime: Shutting down VM
+10-28 22:57:43.345  5116  5116 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-28 22:57:43.346  5116  5116 I AndroidRuntime: Using default boot image
+10-28 22:57:43.346  5116  5116 I AndroidRuntime: Leaving lock profiling enabled
+10-28 22:57:43.379  5116  5116 D AndroidRuntime: Calling main entry com.android.commands.content.Content
+10-28 22:57:43.383  5116  5116 D AndroidRuntime: Shutting down VM
+10-28 22:57:48.859  5229  5229 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-28 22:57:48.860  5229  5229 I AndroidRuntime: Using default boot image
+10-28 22:57:48.860  5229  5229 I AndroidRuntime: Leaving lock profiling enabled
+10-28 22:57:48.894  5229  5229 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+10-28 22:57:48.909  5229  5229 D AndroidRuntime: Shutting down VM
+10-28 22:57:54.673  5251  5251 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-28 22:57:54.674  5251  5251 I AndroidRuntime: Using default boot image
+10-28 22:57:54.674  5251  5251 I AndroidRuntime: Leaving lock profiling enabled
+10-28 22:57:54.710  5251  5251 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-28 22:57:55.735  5251  5251 D AndroidRuntime: Shutting down VM
+10-28 22:57:56.198  5270  5270 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-28 22:57:56.199  5270  5270 I AndroidRuntime: Using default boot image
+10-28 22:57:56.199  5270  5270 I AndroidRuntime: Leaving lock profiling enabled
+10-28 22:57:56.237  5270  5270 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+10-28 22:57:56.240  5270  5270 D AndroidRuntime: Shutting down VM

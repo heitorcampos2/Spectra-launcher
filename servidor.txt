@@ -1,0 +1,92 @@
++ echo '== info'
+== info
++ curl -s -m 5 http://127.0.0.1:8642/api/info
+{"app":"Spectra Launcher","version":"3.1.20-debug","name":"TV de teste","port":8642,"controlsOtherApps":false}+ echo
+
++ echo '== pin errado'
+== pin errado
++ curl -s -m 5 -X POST -d '{"pin":"0000"}' http://127.0.0.1:8642/api/pair
+{"error":"PIN incorreto"}+ echo
+
++ echo '== pair'
+== pair
+++ curl -s -m 5 -X POST -d '{"pin":"1234"}' http://127.0.0.1:8642/api/pair
++ R='{"token":"6f778911780505402c36c7c0c99680b2","name":"TV de teste","port":8642}'
++ echo '{"token":"6f778911780505402c36c7c0c99680b2","name":"TV de teste","port":8642}'
+{"token":"6f778911780505402c36c7c0c99680b2","name":"TV de teste","port":8642}
+++ echo '{"token":"6f778911780505402c36c7c0c99680b2","name":"TV de teste","port":8642}'
+++ sed -n 's/.*"token":"\([^"]*\)".*/\1/p'
++ T=6f778911780505402c36c7c0c99680b2
++ echo '== sem token'
+== sem token
++ curl -s -m 5 -X POST 'http://127.0.0.1:8642/api/key?k=down'
+{"error":"Não pareado: escaneie o QR code ou use o PIN"}+ echo
+
++ K back
++ echo '== key back'
+== key back
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=back'
+{"ok":true}+ echo
+
++ sleep 1
++ shot 05a-apos-voltar 2
++ sleep 2
++ adb exec-out screencap -p
++ K back
++ echo '== key back'
+== key back
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=back'
+{"ok":true}+ echo
+
++ sleep 1
++ shot 05b-apos-voltar2 2
++ sleep 2
++ adb exec-out screencap -p
++ K down
++ echo '== key down'
+== key down
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=down'
+{"ok":true}+ echo
+
++ sleep 1
++ K down
++ echo '== key down'
+== key down
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=down'
+{"ok":true}+ echo
+
++ sleep 1
++ shot 05c-apos-baixo 2
++ sleep 2
++ adb exec-out screencap -p
++ K menu
++ echo '== key menu'
+== key menu
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=menu'
+{"ok":true}+ echo
+
++ sleep 1
++ shot 05d-apos-menu 2
++ sleep 2
++ adb exec-out screencap -p
++ K back
++ echo '== key back'
+== key back
++ curl -s -m 5 -X POST -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' 'http://127.0.0.1:8642/api/key?k=back'
+{"ok":true}+ echo
+
++ sleep 1
++ echo '== apps'
+== apps
++ curl -s -m 8 -H 'X-Spectra-Token: 6f778911780505402c36c7c0c99680b2' http://127.0.0.1:8642/api/apps
++ head -c 600
+[{"pkg":"com.google.android.tv.remote.service","label":"Android TV Remote Service"},{"pkg":"com.google.android.play.games","label":"Play Games"},{"pkg":"com.android.vending","label":"Play Store"},{"pkg":"com.android.tv.settings","label":"Settings"},{"pkg":"com.google.android.youtube.tv","label":"YouTube"}]+ echo
+
++ echo '== web'
+== web
++ curl -s -m 5 http://127.0.0.1:8642/
++ head -c 200
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1+ echo
+

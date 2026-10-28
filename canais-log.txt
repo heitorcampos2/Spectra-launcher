@@ -1,0 +1,22 @@
+10-28 22:55:49.562  3005  3064 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:55:56.722  3005  3048 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:56:02.567  3005  3062 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:56:11.466  3858  3893 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:56:13.045  3858  3885 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:56:35.468  3858  3895 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:56:50.000  3858  3913 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:57:04.515  3858  3884 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+10-28 22:57:14.178  4936  4958 I TestPublisher: canal Canal de Teste: content://android.media.tv/channel/6
+10-28 22:57:14.209  4936  4958 I TestPublisher: canal Inscrições: content://android.media.tv/channel/7
+10-28 22:57:14.211  4936  4958 I TestPublisher: programa Filme de teste 1: content://android.media.tv/preview_program/24
+10-28 22:57:14.221  4936  4958 I TestPublisher: programa Filme de teste 2: content://android.media.tv/preview_program/25
+10-28 22:57:14.224  4936  4958 I TestPublisher: programa Filme de teste 3: content://android.media.tv/preview_program/26
+10-28 22:57:14.232  4936  4958 I TestPublisher: programa Vídeo inscrito 1: content://android.media.tv/preview_program/27
+10-28 22:57:14.233  4936  4958 I TestPublisher: programa Vídeo inscrito 2: content://android.media.tv/preview_program/28
+10-28 22:57:14.234  4936  4958 I TestPublisher: programa Vídeo inscrito 3: content://android.media.tv/preview_program/29
+10-28 22:57:14.235  4936  4958 I TestPublisher: ver a seguir: content://android.media.tv/watch_next_program/1
+10-28 22:57:14.237  4936  4958 I TestPublisher: ver a seguir: content://android.media.tv/watch_next_program/2
+10-28 22:57:14.237  4936  4958 I TestPublisher: publicado ok
+10-28 22:57:15.169  3858  3887 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)
+10-28 22:57:21.681  4986  5019 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)
+10-28 22:57:39.317  4986  5027 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)
