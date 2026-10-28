@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Spectra Launcher</string>
-    <string name="override_service_label">Spectra — Botão Home</string>
-    <string name="override_service_description">Abre o Spectra Launcher sempre que a tela inicial original da TV aparecer (ao apertar o botão Home). Nenhum conteúdo da tela é lido.</string>
+    <string name="override_service_label">Spectra — Botão Home e controle</string>
+    <string name="override_service_description">Abre o Spectra Launcher sempre que a tela inicial original da TV aparecer (ao apertar o botão Home) e permite usar o celular como controle remoto em outros apps (mover a seleção, OK, voltar e digitar). Nada é coletado nem enviado para fora da sua rede.</string>
 </resources>

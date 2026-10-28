@@ -2,6 +2,25 @@
 
 Desenvolvedor: **Heitor Campos** ([@heitorcampos2](https://github.com/heitorcampos2))
 
+<p align="center">
+  <a href="https://github.com/heitorcampos2/Spectra-launcher/releases/latest/download/SpectraLauncher.apk">
+    <img alt="Baixar APK" src="https://img.shields.io/badge/⬇%20Baixar%20APK-Spectra%20Launcher-8B5CF6?style=for-the-badge&logo=android&logoColor=white" height="56">
+  </a>
+  <br>
+  <a href="https://github.com/heitorcampos2/Spectra-launcher/releases/latest"><img alt="Versão" src="https://img.shields.io/github/v/release/heitorcampos2/Spectra-launcher?label=vers%C3%A3o&color=8B5CF6"></a>
+  <a href="https://github.com/heitorcampos2/Spectra-launcher/actions/workflows/build.yml"><img alt="Build" src="https://github.com/heitorcampos2/Spectra-launcher/actions/workflows/build.yml/badge.svg"></a>
+</p>
+
+> **Instalar:** baixe o `SpectraLauncher.apk` pelo botão acima (no navegador da TV, no celular ou no PC) e instale.
+> Depois disso, atualize pelo próprio app: **MENU ☰ › Atualizações › Atualizar agora**.
+> Todas as versões ficam em [Releases](https://github.com/heitorcampos2/Spectra-launcher/releases).
+
+## Novidades da 3.1
+- **Controle remoto pelo celular**: na TV, MENU ☰ › *Parear celular (QR code)*. Defina um PIN e escaneie o QR code com o app **Spectra Controle** no celular (mesma rede Wi-Fi). Tem direcional com deslizar, OK (segure para opções), voltar, início, menu, mídia, volume (inclusive pelos botões de volume do celular), teclado para digitar na TV e lista de apps para abrir.
+  - Sem o app no celular? A câmera comum lê o QR e abre o controle no navegador.
+  - Para controlar também outros apps (YouTube, Netflix…), ative **"Spectra — Botão Home e controle"** em Acessibilidade na TV.
+- **Atualizações pelo GitHub**: Configurações › Atualizações (ou MENU ☰ › Atualizações) verifica, baixa e instala a versão mais recente quando você quiser. Cada mudança no projeto gera uma versão nova automaticamente.
+
 ## Novidades da v3
 - **Sistema de canais**: MENU › Editar canais. "Ver a seguir" (continuar assistindo de todos os apps) e cada canal de cada app (Sintonia, SmartTube, Crunchyroll, Globoplay…) vira uma fileira própria. OK mostra/oculta e segurar OK configura.
 - **Configuração lateral por seção** (⚙ nos cabeçalhos à esquerda ou segurar OK num cartão): nome, ícone, visível, grade, linha deslizante, exibir nome, tamanho P/M/G/GG, estilo, ordenar, mover a seção, gerenciar aplicativos (mostrar/ocultar, **tamanho individual** e **posição** de cada cartão) e definir como padrão.

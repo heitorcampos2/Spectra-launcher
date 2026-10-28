@@ -26,30 +26,33 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug assembleRelease
 
-      - name: Rename APKs
+      - name: Prepare APKs
         run: |
-          V=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          V="3.1.${GITHUB_RUN_NUMBER}"
           echo "V=$V" >> $GITHUB_ENV
           mkdir -p out
-          cp app/build/outputs/apk/debug/*.apk   out/SpectraLauncher-v$V-debug.apk
-          cp app/build/outputs/apk/release/*.apk out/SpectraLauncher-v$V.apk
+          cp app/build/outputs/apk/release/*.apk out/SpectraLauncher.apk
+          cp app/build/outputs/apk/debug/*.apk   out/SpectraLauncher-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: SpectraLauncher-apk
           path: out/*.apk
 
-      # Página de download fixa: github.com/<usuário>/<repo>/releases/latest
+      # Página de download fixa:
+      #   https://github.com/<usuário>/<repo>/releases/latest/download/SpectraLauncher.apk
       - name: Publicar release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v$V"
           gh release delete "$TAG" -y --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" out/*.apk --title "Spectra Launcher $V" \
-            --notes "Build automático de ${GITHUB_SHA::7}. Instale o SpectraLauncher-v$V.apk na TV." --latest
+          MSG=$(git log -1 --pretty=%s)
+          gh release create "$TAG" out/SpectraLauncher.apk out/SpectraLauncher-debug.apk \
+            --title "Spectra Launcher $V" --latest \
+            --notes "$(printf '%s\n\n**Baixar:** SpectraLauncher.apk (instale este na TV e no celular).\nSpectraLauncher-debug.apk é a versão de testes (app separado).' "$MSG")"
 
-      # Cópia dos APKs no branch 'builds' (histórico de 1 commit)
+      # Cópia dos APKs no branch 'builds' (sempre só o último build)
       - name: Atualizar branch builds
         run: |
           cd out
@@ -57,5 +60,43 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git add *.apk
-          git commit -qm "APK v$V (${GITHUB_SHA::7})"
+          git commit -qm "APK $V (${GITHUB_SHA::7})"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" builds
+
+  # Teste rápido num emulador de Android TV: instala, abre as telas e tira prints.
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: SpectraLauncher-apk
+          path: apk
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash .github/smoke.sh
+      - name: Publicar prints no branch smoke
+        if: always()
+        run: |
+          [ -d shots ] || exit 0
+          cd shots
+          git init -q -b smoke
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "smoke ${GITHUB_RUN_NUMBER}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke

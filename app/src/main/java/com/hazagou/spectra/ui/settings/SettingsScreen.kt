@@ -99,6 +99,8 @@ private enum class Cat(val label: String, val icon: String, val description: Str
     INPUTS("Entradas", "🔌", "HDMI, AV e Cast/Espelhamento.", false),
     PERF("Desempenho", "⚡", "Animações, qualidade das imagens e itens por fileira.", false),
     LAUNCHER("Launcher e permissões", "🏠", "Launcher padrão, botão Home, canais e notificações.", false),
+    REMOTE("Controle remoto", "📱", "Use o celular como controle: defina um PIN, escaneie o QR code e controle a TV na mesma rede Wi-Fi.", false),
+    UPDATES("Atualizações", "⟳", "Baixe e instale a versão mais recente publicada no GitHub, sempre que quiser.", false),
     BACKUP("Backup", "💾", "Salve ou restaure todas as configurações em um arquivo (pendrive, nuvem…).", false),
     ABOUT("Sobre", "ℹ", "Spectra Launcher por Heitor Campos (github.com/heitorcampos2).", false),
 }
@@ -114,6 +116,11 @@ fun SettingsScreen(vm: MainViewModel, settings: LauncherSettings, actions: Launc
     var lastCat by remember { mutableStateOf(Cat.PROFILE) }
     val apps by vm.apps.collectAsState()
     BackHandler(enabled = cat != null) { cat = null }
+    val deepLink by vm.settingsDeepLink.collectAsState()
+    LaunchedEffect(deepLink) {
+        deepLink?.let { name -> Cat.entries.firstOrNull { it.name == name }?.let { cat = it; lastCat = it } }
+        vm.settingsDeepLink.value = null
+    }
 
     Row(Modifier.fillMaxSize()) {
         // --------------------------------------------------- esquerda: título + prévia ao vivo
@@ -243,6 +250,9 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
     val scope = rememberCoroutineScope()
     val allContent by vm.allContentApps.collectAsState()
     val tv by vm.tvState.collectAsState()
+    val remoteCfg by vm.remote.config.collectAsState()
+    val remoteRunning by com.hazagou.spectra.remote.RemoteServer.running.collectAsState()
+    val autoUpdate by vm.updates.autoCheck.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
@@ -536,6 +546,39 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 item { SettingRow("Chave da API do Google (opcional)", if (s.googleApiKey.isBlank()) "Não configurada" else "Configurada",
                     "A busca funciona sem chave. Com chave + CX usa a API oficial.") { dialog = "apikey" } }
             }
+            Cat.REMOTE -> {
+                item { Group("Esta TV") }
+                item {
+                    Toggle("Permitir controle pelo celular", remoteCfg.enabled && remoteCfg.pin.isNotBlank(),
+                        if (remoteRunning) "Ativo em ${com.hazagou.spectra.remote.RemoteServer.localIp() ?: "?"}:${com.hazagou.spectra.remote.RemoteServer.port}" else "Só funciona na sua rede local, protegido por PIN") { on ->
+                        if (on && remoteCfg.pin.isBlank()) dialog = "pin" else vm.remote.setEnabled(on)
+                    }
+                }
+                item { SettingRow("PIN", if (remoteCfg.pin.isBlank()) "Definir ›" else "•".repeat(remoteCfg.pin.length), "4 a 8 números. Trocar o PIN desconecta os celulares pareados") { dialog = "pin" } }
+                item { SettingRow("Mostrar QR code para parear", "Abrir ›", "Escaneie com o celular (app Spectra ou câmera)") {
+                    if (remoteCfg.pin.isBlank()) dialog = "pin" else { vm.remote.setEnabled(true); vm.remotePairOpen.value = true }
+                } }
+                item { SettingRow("Nome desta TV", remoteCfg.tvName, "Aparece no celular") { dialog = "tvName" } }
+                item {
+                    SettingRow("Controlar outros apps", if (actions.isHomeOverrideEnabled()) "✔ Ativo" else "Ativar ›",
+                        "Acessibilidade \"Spectra — Botão Home e controle\": permite mover a seleção e digitar no YouTube, Netflix…") { actions.openAccessibilitySettings() }
+                }
+                item { SettingRow("Desconectar todos os celulares", "⟲", "Gera um novo código; será preciso escanear de novo") {
+                    vm.remote.disconnectAll(); toast(ctx, "Celulares desconectados")
+                } }
+                item { Group("Este aparelho") }
+                item { SettingRow("Controlar outra TV", "Abrir ›", "Transforma este aparelho (celular/tablet) em controle de uma TV com o Spectra") {
+                    com.hazagou.spectra.ui.remote.openPhoneRemote(ctx)
+                } }
+                item { Text("No celular, o ícone \"Spectra Controle\" abre o controle direto.", color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall) }
+            }
+            Cat.UPDATES -> {
+                item { com.hazagou.spectra.ui.remote.UpdateCard(vm) }
+                item { Toggle("Verificar ao abrir", autoUpdate, "Procura versão nova no GitHub no máximo a cada 6 horas") { vm.updates.setAutoCheck(it) } }
+                item { com.hazagou.spectra.ui.remote.DownloadPageCard() }
+                item { Text("As versões são publicadas automaticamente pelo GitHub a cada mudança no projeto. A primeira instalação precisa liberar \"instalar apps desconhecidos\" para o Spectra.",
+                    color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall) }
+            }
             Cat.BACKUP -> {
                 item { SettingRow("Salvar backup", "Exportar ›", "Cria um arquivo .json com tudo: seções, aparência, perfil…") {
                     runCatching { exportLauncher.launch("spectra-backup.json") }.onFailure { toast(ctx, "Seletor de arquivos indisponível") }
@@ -571,6 +614,10 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
     when (dialog) {
         "title" -> TextEditDialog("Título da tela inicial", s.title, onSave = { t -> vm.launch { setTitle(t.take(40)) } }, onDismiss = { dialog = null })
         "profileName" -> TextEditDialog("Seu nome", s.profileName, onSave = { t -> if (t.isNotBlank()) vm.launch { setProfileName(t.trim().take(24)) } }, onDismiss = { dialog = null })
+        "pin" -> TextEditDialog("PIN do controle remoto (4 a 8 números)", "", onSave = { p ->
+            if (com.hazagou.spectra.ui.remote.applyPin(vm, ctx, p)) vm.remotePairOpen.value = true
+        }, onDismiss = { dialog = null })
+        "tvName" -> TextEditDialog("Nome desta TV", remoteCfg.tvName, onSave = { t -> vm.remote.setTvName(t.trim().take(30)) }, onDismiss = { dialog = null })
         "emoji" -> EmojiPickerDialog(EMOJIS, s.titleEmoji, onPick = { e -> vm.launch { setTitleEmoji(e) } }, onDismiss = { dialog = null })
         "accent" -> com.hazagou.spectra.ui.components.ColorPickerDialog(
             title = "Cor de destaque", colors = Spectra.ColorGrid, initial = s.accent, initialLum = s.accentLum,

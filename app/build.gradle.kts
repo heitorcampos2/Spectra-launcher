@@ -12,9 +12,21 @@ android {
         applicationId = "com.hazagou.spectra"
         minSdk = 26          // Android 8.0+ (TvProvider moderno). Alvo principal: Android TV 11 (API 30)
         targetSdk = 34
-        versionCode = 3
-        versionName = "3.0.0"
+        // No GitHub Actions cada build ganha um número novo (3.1.<n>), usado pelo menu Atualizações.
+        val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0
+        versionCode = 3100 + ciRun
+        versionName = "3.1.$ciRun"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    // Mesma chave em todos os builds (PC e GitHub): permite atualizar por cima sem desinstalar.
+    signingConfigs {
+        create("spectra") {
+            storeFile = rootProject.file("keystore/spectra.jks")
+            storePassword = System.getenv("SPECTRA_STORE_PASSWORD") ?: "spectra-launcher"
+            keyAlias = "spectra"
+            keyPassword = System.getenv("SPECTRA_KEY_PASSWORD") ?: "spectra-launcher"
+        }
     }
 
     buildTypes {
@@ -22,11 +34,10 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Assina com a chave de debug para facilitar a instalação via ADB/pendrive.
-            // Troque por sua própria keystore antes de distribuir.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("spectra")
         }
         debug {
+            signingConfig = signingConfigs.getByName("spectra")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
@@ -75,6 +86,10 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
+
+    // QR code: gerar (TV) e escanear (celular)
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0") { isTransitive = false }
 
     // Wallpaper em vídeo
     implementation("androidx.media3:media3-exoplayer:1.4.1")

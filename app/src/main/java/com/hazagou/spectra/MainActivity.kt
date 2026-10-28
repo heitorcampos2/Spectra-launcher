@@ -82,6 +82,10 @@ class MainActivity : ComponentActivity(), LauncherActions {
 
     companion object {
         const val EXTRA_FROM_HOME_OVERRIDE = "from_home_override"
+        const val EXTRA_OPEN = "open"
+        /** Activity visível agora (o controle remoto injeta as teclas nela). */
+        @Volatile var foreground: java.lang.ref.WeakReference<MainActivity>? = null
+            private set
         private val GOOGLE_TV_LAUNCHERS = listOf("com.google.android.apps.tv.launcherx", "com.google.android.tvlauncher")
     }
 
@@ -101,11 +105,27 @@ class MainActivity : ComponentActivity(), LauncherActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { Root() }
+        handleOpenExtra(intent)
+    }
+
+    /** Atalhos vindos de fora (ex.: notificação de atualização): open=updates|remote */
+    private fun handleOpenExtra(intent: Intent?) {
+        when (intent?.getStringExtra(EXTRA_OPEN)) {
+            "remote" -> vm.remotePairOpen.value = true
+            "updates" -> vm.openSettings("UPDATES")
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        foreground = java.lang.ref.WeakReference(this)
         vm.refresh()
+        vm.updates.checkIfDue()
+    }
+
+    override fun onPause() {
+        if (foreground?.get() === this) foreground = null
+        super.onPause()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -114,6 +134,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
         if (intent.hasCategory(Intent.CATEGORY_HOME) || intent.getBooleanExtra(EXTRA_FROM_HOME_OVERRIDE, false) ||
             intent.action == Intent.ACTION_MAIN
         ) vm.goHome()
+        handleOpenExtra(intent)
     }
 
     @Composable
@@ -211,6 +232,8 @@ class MainActivity : ComponentActivity(), LauncherActions {
                     com.hazagou.spectra.ui.home.SectionPanel(vm, s)
                     com.hazagou.spectra.ui.home.ChannelsPanel(vm, s) { requestEpgPermission() }
                     if (profileOpen) ProfileDialog(vm, s)
+                    val remotePair by vm.remotePairOpen.collectAsState()
+                    if (remotePair) com.hazagou.spectra.ui.remote.RemotePairDialog(vm) { vm.remotePairOpen.value = false }
 
                     if (showAsk) {
                         DefaultLauncherDialog(
@@ -283,8 +306,8 @@ class MainActivity : ComponentActivity(), LauncherActions {
 
     override fun openAccessibilitySettings() {
         val ok = runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); true }.getOrDefault(false)
-        if (ok) toast(this, "Ative \"Spectra — Botão Home\" na lista de acessibilidade")
-        else toast(this, "Abra Configurações › Acessibilidade e ative \"Spectra — Botão Home\"")
+        if (ok) toast(this, "Ative \"Spectra — Botão Home e controle\" na lista de acessibilidade")
+        else toast(this, "Abra Configurações › Acessibilidade e ative \"Spectra — Botão Home e controle\"")
     }
 
     override fun requestEpgPermission() {

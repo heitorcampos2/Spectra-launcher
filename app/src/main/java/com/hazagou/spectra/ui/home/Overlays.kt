@@ -97,6 +97,17 @@ fun SidePanel(vm: MainViewModel, settings: LauncherSettings, actions: LauncherAc
                     item { OptionRow("Personalizar Spectra", "✦") { vm.open(Screen.SETTINGS) } }
                     item { OptionRow("Wallpapers", "🖼") { vm.open(Screen.WALLPAPER) } }
                     item { OptionRow("Configurações do Android", "⚙") { runShortcut(ShortcutKind.ANDROID_SETTINGS, vm) } }
+                    item { GroupTitle("Controle remoto") }
+                    item { OptionRow("Parear celular (QR code)", "📱") { vm.sidePanelOpen.value = false; vm.remotePairOpen.value = true } }
+                    item { OptionRow("Usar este aparelho como controle", "🎮") { vm.sidePanelOpen.value = false; com.hazagou.spectra.ui.remote.openPhoneRemote(ctx) } }
+                    item {
+                        val up by vm.updates.state.collectAsState()
+                        OptionRow("Atualizações", "⟳", value = when (val u = up) {
+                            is com.hazagou.spectra.update.UpdateState.Available -> "Nova: ${u.release.version}"
+                            is com.hazagou.spectra.update.UpdateState.Downloading -> "${(u.progress * 100).toInt()}%"
+                            else -> BuildConfig.VERSION_NAME.substringBefore('-')
+                        }) { vm.openSettings("UPDATES") }
+                    }
                     item { GroupTitle("Sistema") }
                     item { OptionRow("Notificações", "🔔", value = if (notifs.isEmpty()) null else "${notifs.size}") { vm.sidePanelOpen.value = false; vm.notificationsOpen.value = true } }
                     item { OptionRow("Wi-Fi e rede", "📶") { vm.system.openWifiSettings() } }

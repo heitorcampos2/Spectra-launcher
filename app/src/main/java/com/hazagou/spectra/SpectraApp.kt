@@ -14,6 +14,13 @@ import com.hazagou.spectra.data.SettingsRepository
 import com.hazagou.spectra.data.SystemRepository
 import com.hazagou.spectra.data.TvContentRepository
 import com.hazagou.spectra.data.WallpaperRepository
+import com.hazagou.spectra.remote.RemoteServer
+import com.hazagou.spectra.remote.RemoteStore
+import com.hazagou.spectra.update.UpdateManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -28,6 +35,10 @@ class SpectraApp : Application(), ImageLoaderFactory {
     lateinit var wallpapers: WallpaperRepository private set
     lateinit var sections: SectionsRepository private set
     lateinit var system: SystemRepository private set
+    lateinit var remote: RemoteStore private set
+    lateinit var updates: UpdateManager private set
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
@@ -37,6 +48,10 @@ class SpectraApp : Application(), ImageLoaderFactory {
         wallpapers = WallpaperRepository(this)
         sections = SectionsRepository(this, settings)
         system = SystemRepository(this)
+        remote = RemoteStore(this)
+        updates = UpdateManager(this)
+        // Servidor do controle remoto: liga/desliga sozinho conforme a configuração (PIN + ativado)
+        appScope.launch { remote.config.collect { RemoteServer.sync(this@SpectraApp, remote) } }
     }
 
     /** Coil afinado para TV: cache em memória generoso, cache em disco e User-Agent de navegador. */

@@ -91,6 +91,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val tvRepo = core.tv
     val wallRepo = core.wallpapers
     val system = core.system
+    val remote = core.remote
+    val updates = core.updates
 
     private val refreshTick = MutableStateFlow(0)
     val screen = MutableStateFlow(Screen.HOME)
@@ -105,6 +107,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val channelsOpen = MutableStateFlow(false)
     /** Seção em modo mover (pelos cabeçalhos à esquerda: ↑/↓ movem, OK confirma). */
     val movingSection = MutableStateFlow<String?>(null)
+    /** Diálogo "Parear celular" (QR code do controle remoto). */
+    val remotePairOpen = MutableStateFlow(false)
+    /** Abre as Configurações direto numa categoria (ex.: "UPDATES", "REMOTE"). */
+    val settingsDeepLink = MutableStateFlow<String?>(null)
     /** Modo ocioso (só wallpaper + relógio). */
     val idle = MutableStateFlow(false)
     @Volatile var lastInteraction: Long = System.currentTimeMillis()
@@ -261,7 +267,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         channelsOpen.value = false
         movingSection.value = null
         moving.value = null
+        remotePairOpen.value = false
         homeResetSignal.value++
+    }
+
+    /** Serviço de acessibilidade ativo (botão Home + controle de outros apps). */
+    fun homeOverrideEnabled(): Boolean {
+        val ctx = getApplication<Application>()
+        val enabled = android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return enabled.split(':').any { it.startsWith("${ctx.packageName}/") }
+    }
+
+    fun openSettings(category: String) {
+        settingsDeepLink.value = category
+        open(Screen.SETTINGS)
     }
 
     fun open(s: Screen) {
