@@ -20,6 +20,7 @@ enum class SectionType(val label: String, val description: String, val defaultIc
     SUGGESTIONS("Sugestões", "Recomendações de todos os apps numa fileira só", "✨"),
     SUBSCRIPTIONS("Inscrições", "Canais de inscrições (YouTube, SmartTube…) numa fileira só", "🔔"),
     CHANNEL("Canal", "Um canal específico de um app (escolha em Editar canais)", "📺"),
+    APP_BLOCK("Bloco do app", "Continuar, Recomendados e Canais de UM app (criado sozinho)", "🎬"),
     INPUTS("Entradas", "HDMI, AV e Cast/Espelhamento", "🔌"),
     TV_APPS("Aplicativos de TV", "Todos os apps feitos para TV", "🖥"),
     MOBILE_APPS("Aplicativos móveis", "Apps de celular instalados", "📱"),
@@ -176,6 +177,22 @@ class SectionsRepository(private val context: Context, private val settings: Set
         val t = list.indexOfFirst { it.id == targetId }
         if (t < 0) return
         list.add(if (after) t + 1 else t, s)
+        save(list)
+    }
+
+    /**
+     * Cada app com conteúdo vira a sua própria seção (⚙ e ⇅ como as outras), inserida no lugar
+     * dos "Blocos automáticos". Não recria apps que a pessoa já configurou/ocultou.
+     */
+    suspend fun materializeAppBlocks(apps: List<Pair<String, String>>) {
+        val list = current().toMutableList()
+        val have = list.filter { it.type == SectionType.APP_BLOCK }.map { it.channelPackage }.toSet()
+        val missing = apps.filter { it.first !in have }
+        if (missing.isEmpty()) return
+        val at = list.indexOfFirst { it.type == SectionType.APP_CONTENT }.let { if (it < 0) list.size else it }
+        list.addAll(at, missing.map { (pkg, label) ->
+            HomeSection("app_$pkg", SectionType.APP_BLOCK, label, "🎬", channelKey = pkg)
+        })
         save(list)
     }
 

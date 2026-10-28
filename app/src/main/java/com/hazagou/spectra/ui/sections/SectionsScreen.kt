@@ -161,7 +161,7 @@ private fun NewSectionDialog(vm: MainViewModel, onDismiss: () -> Unit) {
         SpectraDialog(onDismiss, width = 620.dp) {
             Text("Nova seção", color = Color.White, style = MaterialTheme.typography.headlineSmall)
             Text("Escolha o tipo:", color = Spectra.TextSecondary)
-            SectionType.entries.forEachIndexed { i, t ->
+            SectionType.entries.filter { it != SectionType.APP_BLOCK }.forEachIndexed { i, t ->
                 OptionRow(t.label, t.defaultIcon, modifier = if (i == 0) Modifier.focusRequester(fr) else Modifier, value = null) {
                     if (t == SectionType.CUSTOM) name = ""
                     else if (t == SectionType.CHANNEL) { onDismiss(); vm.goHome(); vm.channelsOpen.value = true }

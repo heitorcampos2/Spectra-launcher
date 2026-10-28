@@ -163,6 +163,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return apps.sortedWith(compareBy<AppInfo> { idx[it.packageName] ?: Int.MAX_VALUE })
     }
 
+    /** Fileiras de um app: cabeçalho + Continuar + Recomendados + Canais (cada uma pode ser desligada). */
+    private fun appBlock(sec: HomeSection, cs: HomeAppSection, s: LauncherSettings, rows: MutableList<HomeRowModel>) {
+        val pkg = cs.app.packageName
+        if (!s.isAppContentEnabled(pkg) || pkg in s.hidden) return
+        val max = s.maxProgramsPerRow
+        val c = cs.content
+        val sub = ArrayList<HomeRowModel>()
+        if (s.isSectionEnabled(pkg, SectionKind.CONTINUE) && c.continueItems.isNotEmpty())
+            sub += HomeRowModel.Programs("c_${sec.id}_$pkg", "Continuar assistindo", "▶", cs.app, c.continueItems.take(max), null, sec)
+        if (s.isSectionEnabled(pkg, SectionKind.RECOMMENDED) && c.recommended.isNotEmpty())
+            sub += HomeRowModel.Programs("r_${sec.id}_$pkg", "Recomendados", "★", cs.app, c.recommended.take(max), null, sec)
+        if (s.isSectionEnabled(pkg, SectionKind.CHANNELS)) c.channels.forEach { ch ->
+            sub += HomeRowModel.Programs("ch_${sec.id}_${ch.id}", ch.name, "📺", cs.app, ch.programs.take(max), ch, sec)
+        }
+        if (sub.isEmpty()) return
+        if (sec.type != SectionType.APP_BLOCK || sec.showTitle) rows += HomeRowModel.ContentHeader(sec.id, cs.app, c)
+        rows.addAll(sub)
+    }
+
     private fun buildRows(
         apps: List<AppInfo>,
         tv: TvContentRepository.State?,
@@ -251,21 +270,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (tv is TvContentRepository.State.NoPermission && !permissionAdded) {
                         rows += HomeRowModel.Permission; permissionAdded = true
                     }
-                    val max = s.maxProgramsPerRow
-                    for (cs in contentApps) {
-                        val pkg = cs.app.packageName
-                        if (!s.isAppContentEnabled(pkg) || pkg in s.hidden) continue
-                        val c = cs.content
-                        val sub = ArrayList<HomeRowModel>()
-                        if (s.isSectionEnabled(pkg, SectionKind.CONTINUE) && c.continueItems.isNotEmpty())
-                            sub += HomeRowModel.Programs("c_${sec.id}_$pkg", "Continuar assistindo", "▶", cs.app, c.continueItems.take(max), null)
-                        if (s.isSectionEnabled(pkg, SectionKind.RECOMMENDED) && c.recommended.isNotEmpty())
-                            sub += HomeRowModel.Programs("r_${sec.id}_$pkg", "Recomendados", "★", cs.app, c.recommended.take(max), null)
-                        if (s.isSectionEnabled(pkg, SectionKind.CHANNELS)) c.channels.forEach { ch ->
-                            sub += HomeRowModel.Programs("ch_${sec.id}_${ch.id}", ch.name, "📺", cs.app, ch.programs.take(max), ch)
-                        }
-                        if (sub.isNotEmpty()) { rows += HomeRowModel.ContentHeader(sec.id, cs.app, c); rows.addAll(sub) }
-                    }
+                    // apps que ainda não viraram seção própria (normalmente nenhum: são criadas sozinhas)
+                    val own = sections.filter { it.type == SectionType.APP_BLOCK }.map { it.channelPackage }.toSet()
+                    for (cs in contentApps) if (cs.app.packageName !in own) appBlock(sec, cs, s, rows)
+                }
+                SectionType.APP_BLOCK -> {
+                    // "Blocos automáticos por app" (Editar canais) liga/desliga todos de uma vez
+                    val master = sections.any { it.type == SectionType.APP_CONTENT && it.visible }
+                    val cs = contentApps.firstOrNull { it.app.packageName == sec.channelPackage }
+                    if (master && cs != null) appBlock(sec, cs, s, rows)
                 }
             }
         }
@@ -273,6 +286,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        // Cada app com canais/continuar vira uma seção própria (configurável e móvel como as outras)
+        viewModelScope.launch {
+            combine(allContentApps, sections) { c, secs -> c to secs }.collect { (c, secs) ->
+                if (secs.none { it.type == SectionType.APP_CONTENT && it.visible }) return@collect
+                val have = secs.filter { it.type == SectionType.APP_BLOCK }.map { it.channelPackage }.toSet()
+                val missing = c.filter { it.app.packageName !in have }
+                if (missing.isNotEmpty()) sectionsRepo.materializeAppBlocks(missing.map { it.app.packageName to it.app.label })
+            }
+        }
         // Troca automática de wallpaper: apresentação (wallpapers marcados) ou troca por categoria/salvos
         viewModelScope.launch {
             data class Rot(val slide: Boolean, val seconds: Int, val files: List<String>, val shuffle: Boolean, val minutes: Int, val source: String)

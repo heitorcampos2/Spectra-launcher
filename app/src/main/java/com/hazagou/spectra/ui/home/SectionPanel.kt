@@ -122,8 +122,23 @@ private fun SectionPanelContent(s: HomeSection, vm: MainViewModel, settings: Lau
             }
         }
         item { OptionRow("Ordenar", "≡", value = if (s.sort == "az") "A–Z" else "Personalizado") { upd { it.copy(sort = if (it.sort == "az") "custom" else "az") } } }
-        item { OptionRow("Mover seção para cima", "⇡") { vm.sectionsDo { move(s.id, -1) } } }
-        item { OptionRow("Mover seção para baixo", "⇣") { vm.sectionsDo { move(s.id, 1) } } }
+        if (s.type == SectionType.APP_BLOCK) {
+            val pkg = s.channelPackage
+            item { OptionRow("Mostrar este app na tela inicial", "👁", value = onOff(settings.isAppContentEnabled(pkg))) {
+                vm.launch { setSectionDisabled("$pkg|*", settings.isAppContentEnabled(pkg)) }
+            } }
+            com.hazagou.spectra.data.SectionKind.entries.forEach { k ->
+                item { OptionRow(k.label, when (k) {
+                        com.hazagou.spectra.data.SectionKind.CONTINUE -> "▶"
+                        com.hazagou.spectra.data.SectionKind.RECOMMENDED -> "★"
+                        com.hazagou.spectra.data.SectionKind.CHANNELS -> "📺"
+                    }, value = onOff(settings.isSectionEnabled(pkg, k))) {
+                    vm.launch { setSectionDisabled("$pkg|${k.key}", settings.isSectionEnabled(pkg, k)) }
+                } }
+            }
+        }
+        item { OptionRow("Mover seção para cima", "⇡") { vm.moveSectionVisible(s.id, -1) } }
+        item { OptionRow("Mover seção para baixo", "⇣") { vm.moveSectionVisible(s.id, 1) } }
         if (isApps) item { OptionRow("Gerenciar aplicativos", "✎", value = "›") { managing = true } }
         item {
             OptionRow("Definir como padrão", "↦", value = "aplicar a todas") {

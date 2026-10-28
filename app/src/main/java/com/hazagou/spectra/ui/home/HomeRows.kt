@@ -319,9 +319,12 @@ private fun HeaderRail(
     onMoveDelta: (String, Int) -> Unit,
 ) {
     val accent = LocalUi.current.accent
+    // um ícone por SEÇÃO (um app com várias fileiras aparece uma vez só)
     val entries = rows.withIndex().filter { it.value is HomeRowModel.Items || it.value is HomeRowModel.Programs }
+        .distinctBy { it.value.sectionId() ?: it.value.key }
     val railState = rememberLazyListState()
-    val current = entries.indexOfFirst { it.value.key == focusedKey }
+    val focusedSec = rows.firstOrNull { it.key == focusedKey }?.let { it.sectionId() ?: it.key }
+    val current = entries.indexOfFirst { (it.value.sectionId() ?: it.value.key) == focusedSec }
     val focusTarget = if (current >= 0) current else 0
     LaunchedEffect(current) { if (current >= 0) runCatching { railState.animateScrollToItem((current - 2).coerceAtLeast(0)) } }
     LazyColumn(
@@ -332,7 +335,7 @@ private fun HeaderRail(
         horizontalAlignment = Alignment.End
     ) {
         itemsIndexed(entries, key = { _, e -> "rail_" + e.value.key }) { pos, e ->
-            val isCur = e.value.key == focusedKey
+            val isCur = (e.value.sectionId() ?: e.value.key) == focusedSec
             val secId = e.value.sectionId()
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
                 if (isCur && secId != null) {
