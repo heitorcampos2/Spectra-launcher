@@ -109,6 +109,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val movingSection = MutableStateFlow<String?>(null)
     /** Diálogo "Parear celular" (QR code do controle remoto). */
     val remotePairOpen = MutableStateFlow(false)
+    /** Assistente da primeira abertura. */
+    val onboardingOpen = MutableStateFlow(false)
+    /** Aumenta a cada volta para o Spectra (atualiza o status das permissões no assistente). */
+    val resumeTick = MutableStateFlow(0)
     /** Abre as Configurações direto numa categoria (ex.: "UPDATES", "REMOTE"). */
     val settingsDeepLink = MutableStateFlow<String?>(null)
     /** Modo ocioso (só wallpaper + relógio). */

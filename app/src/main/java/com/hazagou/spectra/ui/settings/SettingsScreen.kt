@@ -82,6 +82,8 @@ interface LauncherActions {
     fun openAccessibilitySettings()
     fun requestEpgPermission()
     fun isGoogleTv(): Boolean
+    /** Abre "Informações do app" do Spectra (Permissões) nas configurações do Android. */
+    fun openAppSettings()
 }
 
 private enum class Cat(val label: String, val icon: String, val description: String, val preview: Boolean) {
@@ -543,6 +545,8 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 item { SettingRow("Atualizar conteúdo agora", "⟳") { vm.refresh(); toast(ctx, "Atualizando…") } }
             }
             Cat.LAUNCHER -> {
+                item { SettingRow("Assistente de configuração", "Abrir ›", "Passo a passo: canais, botão Home, notificações e controle") { vm.onboardingOpen.value = true } }
+                item { SettingRow("Permissões do app (Android)", "Abrir ›", "Configurações › Apps › Spectra Launcher › Permissões") { actions.openAppSettings() } }
                 item { SettingRow("Definir como launcher padrão", if (actions.isDefaultLauncher()) "✔ Padrão" else "Definir ›", "Abre o Spectra ao apertar Home") { actions.requestDefaultLauncher() } }
                 item {
                     SettingRow("Substituir botão Home (acessibilidade)", if (actions.isHomeOverrideEnabled()) "✔ Ativo" else "Ativar ›",

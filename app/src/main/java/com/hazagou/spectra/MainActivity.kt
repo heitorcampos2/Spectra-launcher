@@ -124,6 +124,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
         super.onResume()
         foreground = java.lang.ref.WeakReference(this)
         vm.refresh()
+        vm.resumeTick.value++
         vm.updates.checkIfDue()
     }
 
@@ -162,6 +163,14 @@ class MainActivity : ComponentActivity(), LauncherActions {
 
         LaunchedEffect(Unit) {
             delay(900)
+            val prefs = getSharedPreferences("spectra_onboarding", MODE_PRIVATE)
+            if (!prefs.getBoolean("done", false)) {
+                // primeira abertura: o assistente substitui as perguntas soltas
+                vm.onboardingOpen.value = true
+                askedThisSession = true
+                epgAskedThisSession = true
+                return@LaunchedEffect
+            }
             if (!askedThisSession && s.askDefaultLauncher && !isDefaultLauncher() && !isHomeOverrideEnabled()) {
                 showAsk = true
             } else maybeAskEpg()
@@ -236,6 +245,12 @@ class MainActivity : ComponentActivity(), LauncherActions {
                     com.hazagou.spectra.ui.home.SectionPanel(vm, s)
                     com.hazagou.spectra.ui.home.ChannelsPanel(vm, s) { requestEpgPermission() }
                     if (profileOpen) ProfileDialog(vm, s)
+                    val onboarding by vm.onboardingOpen.collectAsState()
+                    if (onboarding) com.hazagou.spectra.ui.home.OnboardingDialog(vm, this@MainActivity) {
+                        vm.onboardingOpen.value = false
+                        getSharedPreferences("spectra_onboarding", MODE_PRIVATE).edit().putBoolean("done", true).apply()
+                        vm.refresh()
+                    }
                     val remotePair by vm.remotePairOpen.collectAsState()
                     if (remotePair) com.hazagou.spectra.ui.remote.RemotePairDialog(vm) { vm.remotePairOpen.value = false }
 
@@ -322,6 +337,14 @@ class MainActivity : ComponentActivity(), LauncherActions {
         }
         if (missing.isEmpty()) { vm.refresh(); toast(this, "Permissões de canais já concedidas ✔"); return }
         epgPermission.launch(missing.toTypedArray())
+    }
+
+    override fun openAppSettings() {
+        val ok = runCatching {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
+        }.getOrDefault(false)
+        if (ok) toast(this, "Abra \"Permissões\" e ative as permissões de TV/canais")
+        else runCatching { startActivity(Intent(Settings.ACTION_SETTINGS)) }
     }
 
     override fun isGoogleTv(): Boolean =
