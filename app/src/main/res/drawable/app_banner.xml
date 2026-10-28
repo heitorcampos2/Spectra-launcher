@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="320" android:endY="180">
+                <item android:offset="0" android:color="#FF17154F" />
+                <item android:offset="0.6" android:color="#FF2A1665" />
+                <item android:offset="1" android:color="#FF5B1B6E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- nuvens estilizadas -->
+    <path android:fillColor="#559C5AA8"
+        android:pathData="M20,150 q20,-28 46,-14 q14,-22 40,-8 q22,-20 46,0 q24,-16 44,4 q26,-10 40,12 q30,-4 64,10 v26 h-280z" />
+    <!-- prisma "S" -->
+    <path android:fillColor="#FFE0135A"
+        android:pathData="M132,46 h62 l-14,18 h-44 a9,9 0,0 0,0 18 h28 a27,27 0,0 1,0 54 h-62 l14,-18 h48 a9,9 0,0 0,0 -18 h-28 a27,27 0,0 1,-4 -54z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M210,58 h70 v6 h-70z" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M210,74 h52 v6 h-52z" />
+    <path android:fillColor="#66FFFFFF" android:pathData="M210,90 h62 v6 h-62z" />
+</vector>
