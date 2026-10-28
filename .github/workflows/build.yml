@@ -100,3 +100,40 @@ jobs:
           git add -A
           git commit -qm "smoke ${GITHUB_RUN_NUMBER}"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke
+
+  # Teste do "Controle completo do sistema": ADB local + teclas em OUTRO app (Configurações do Android)
+  adb-test:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: SpectraLauncher-apk
+          path: apk
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash .github/adb-test.sh
+      - name: Publicar resultado no branch smoke-adb
+        if: always()
+        run: |
+          [ -d shots ] || exit 0
+          cd shots
+          git init -q -b smoke-adb
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "adb ${GITHUB_RUN_NUMBER}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke-adb
