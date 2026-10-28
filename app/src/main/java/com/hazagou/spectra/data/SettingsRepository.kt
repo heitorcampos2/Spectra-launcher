@@ -54,7 +54,14 @@ enum class WallTransition(val label: String) {
     NONE("Sem animação"),
 }
 
-enum class CardStyle(val label: String) { BANNER("Banner 16:9"), ICON("Ícone redondo"), POSTER("Pôster") }
+enum class CardStyle(val label: String) {
+    BANNER("Banner 16:9"),
+    ICON("Ícone redondo"),
+    POSTER("Pôster"),
+    SQUARE("Quadrado 1:1"),
+    WIDE("Panorâmico 21:9"),
+    COMPACT("Compacto (ícone + nome)"),
+}
 
 enum class PerformanceMode(val label: String) {
     MAX_PERFORMANCE("Máximo desempenho"),
@@ -184,6 +191,9 @@ data class LauncherSettings(
         "$pkg|*" !in disabledSections && "$pkg|${kind.key}" !in disabledSections
 
     fun isAppContentEnabled(pkg: String) = "$pkg|*" !in disabledSections
+
+    /** Cada canal de um app pode ser desligado sozinho (Bloco do app › ⚙). */
+    fun isChannelEnabled(pkg: String, channelName: String) = "$pkg|ch:$channelName" !in disabledSections
 }
 
 class SettingsRepository(private val context: Context) {
@@ -401,7 +411,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setLeftHeaders(v: Boolean) = edit { it[K.leftHeaders] = v }
     suspend fun setIdleMinutes(v: Int) = edit { it[K.idleMinutes] = v }
     suspend fun setCardStyle(v: CardStyle) = edit { it[K.cardStyle] = v.name }
-    suspend fun setCardSize(v: Int) = edit { it[K.cardSize] = v.coerceIn(0, 3) }
+    suspend fun setCardSize(v: Int) = edit { it[K.cardSize] = v.coerceIn(com.hazagou.spectra.ui.home.MIN_SIZE, com.hazagou.spectra.ui.home.MAX_SIZE) }
     suspend fun setCorner(v: Int) = edit { it[K.corner] = v.coerceIn(0, 32) }
     suspend fun setShowLabels(v: Boolean) = edit { it[K.showLabels] = v }
     suspend fun setShowSectionTitles(v: Boolean) = edit { it[K.showSectionTitles] = v }

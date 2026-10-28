@@ -126,8 +126,8 @@ fun AppOptionsDialog(app: AppInfo, section: HomeSection?, vm: MainViewModel, set
                 vm.sectionsDo { removeApp(appSection.id, app.packageName) }; onDismiss()
             }
             val curSize = appSection.appSizes[app.packageName] ?: (appSection.cardSize ?: settings.cardSize)
-            com.hazagou.spectra.ui.components.AdjustRow("Tamanho deste cartão", com.hazagou.spectra.ui.home.SIZE_LABELS[curSize]) { d ->
-                vm.sectionsDo { update(appSection.id) { it.copy(appSizes = it.appSizes + (app.packageName to (curSize + d).coerceIn(0, 3))) } }
+            com.hazagou.spectra.ui.components.AdjustRow("Tamanho deste cartão", com.hazagou.spectra.ui.home.sizeLabel(curSize)) { d ->
+                vm.sectionsDo { update(appSection.id) { it.copy(appSizes = it.appSizes + (app.packageName to (curSize + d).coerceIn(com.hazagou.spectra.ui.home.MIN_SIZE, com.hazagou.spectra.ui.home.MAX_SIZE))) } }
             }
             OptionRow("Configurar esta seção (painel lateral)", "⚙") { vm.sectionPanel.value = appSection.id; onDismiss() }
             OptionRow("Mover a seção para cima", "⇡") { vm.sectionsDo { move(appSection.id, -1) }; onDismiss() }

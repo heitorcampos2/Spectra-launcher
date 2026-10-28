@@ -174,7 +174,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sub += HomeRowModel.Programs("c_${sec.id}_$pkg", "Continuar assistindo", "▶", cs.app, c.continueItems.take(max), null, sec)
         if (s.isSectionEnabled(pkg, SectionKind.RECOMMENDED) && c.recommended.isNotEmpty())
             sub += HomeRowModel.Programs("r_${sec.id}_$pkg", "Recomendados", "★", cs.app, c.recommended.take(max), null, sec)
-        if (s.isSectionEnabled(pkg, SectionKind.CHANNELS)) c.channels.forEach { ch ->
+        if (s.isSectionEnabled(pkg, SectionKind.CHANNELS)) c.channels.filter { s.isChannelEnabled(pkg, it.name) }.forEach { ch ->
             sub += HomeRowModel.Programs("ch_${sec.id}_${ch.id}", ch.name, "📺", cs.app, ch.programs.take(max), ch, sec)
         }
         if (sub.isEmpty()) return

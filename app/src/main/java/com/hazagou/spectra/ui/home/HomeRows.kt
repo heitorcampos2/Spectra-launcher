@@ -509,7 +509,7 @@ private fun ProgramsRow(
     fun Card(i: Int, p: TvProgram) {
         Box(if (i == 0) Modifier.focusRequester(firstFocus).revealRailOnLeft() else Modifier) {
             ProgramCard(
-                program = p, height = programH,
+                program = p, height = programH, format = sec?.cardStyle,
                 onFocus = { focusedProgram = p },
                 onLongClick = onConfigure,
                 onClick = { if (!vm.tvRepo.open(p, row.channel, vm.appsRepo)) toast(context, "Não foi possível abrir") }

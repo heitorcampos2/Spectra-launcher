@@ -52,24 +52,39 @@ import com.hazagou.spectra.ui.theme.Spectra
 
 val LocalAppRepo = compositionLocalOf<AppRepository> { error("AppRepository não fornecido") }
 
-fun appCardWidth(style: CardStyle, size: Int): Dp = when (style) {
-    CardStyle.BANNER -> when (size) { 0 -> 176.dp; 2 -> 260.dp; 3 -> 320.dp; else -> 214.dp }
-    CardStyle.ICON -> when (size) { 0 -> 84.dp; 2 -> 124.dp; 3 -> 150.dp; else -> 104.dp }
-    CardStyle.POSTER -> when (size) { 0 -> 112.dp; 2 -> 160.dp; 3 -> 196.dp; else -> 134.dp }
+/** Tamanhos: -2 = PPP, -1 = PP, 0 = P, 1 = M, 2 = G, 3 = GG, 4 = XL. */
+const val MIN_SIZE = -2
+const val MAX_SIZE = 4
+
+fun sizeFactor(size: Int): Float = when (size.coerceIn(MIN_SIZE, MAX_SIZE)) {
+    -2 -> 0.58f; -1 -> 0.70f; 0 -> 0.82f; 2 -> 1.21f; 3 -> 1.5f; 4 -> 1.85f; else -> 1f
 }
+
+fun sizeLabel(size: Int): String = when (size.coerceIn(MIN_SIZE, MAX_SIZE)) {
+    -2 -> "PPP"; -1 -> "PP"; 0 -> "P"; 2 -> "G"; 3 -> "GG"; 4 -> "XL"; else -> "M"
+}
+
+fun appCardWidth(style: CardStyle, size: Int): Dp = when (style) {
+    CardStyle.BANNER -> 214.dp
+    CardStyle.ICON -> 104.dp
+    CardStyle.POSTER -> 134.dp
+    CardStyle.SQUARE -> 120.dp
+    CardStyle.WIDE -> 290.dp
+    CardStyle.COMPACT -> 236.dp
+} * sizeFactor(size)
 
 fun appCardHeight(style: CardStyle, size: Int): Dp {
     val w = appCardWidth(style, size)
     return when (style) {
         CardStyle.BANNER -> w * 9f / 16f
-        CardStyle.ICON -> w
+        CardStyle.ICON, CardStyle.SQUARE -> w
         CardStyle.POSTER -> w * 1.45f
+        CardStyle.WIDE -> w * 9f / 21f
+        CardStyle.COMPACT -> w * 0.30f
     }
 }
 
-fun programHeight(size: Int): Dp = when (size) { 0 -> 118.dp; 2 -> 168.dp; 3 -> 210.dp; else -> 140.dp }
-
-val SIZE_LABELS = listOf("P", "M", "G", "GG")
+fun programHeight(size: Int): Dp = 140.dp * sizeFactor(size)
 
 @Composable
 fun rememberBanner(app: AppInfo): ImageBitmap? {
@@ -139,17 +154,34 @@ fun AppCard(
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(w)) {
         FocusCard(
             modifier = Modifier.width(w).height(h).onFocusChanged { focused = it.hasFocus }.then(movingMod),
-            corner = if (style == CardStyle.ICON) w / 2 else ui.corner.dp,
+            corner = if (style == CardStyle.ICON) w / 2 else if (style == CardStyle.COMPACT) h / 2 else ui.corner.dp,
             onFocus = onFocus,
             onLongClick = if (moving) null else onLongClick,
             onMoveKey = if (moving) onMoveKey else null,
             onClick = onClick
         ) { _ ->
             when (style) {
-                CardStyle.BANNER -> {
+                CardStyle.BANNER, CardStyle.WIDE -> {
                     val banner = if (app.isTvApp) rememberBanner(app) else null
                     if (banner != null) Image(banner, app.label, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     else IconOnGradient(app)
+                }
+                CardStyle.SQUARE -> {
+                    val icon = rememberIcon(app.packageName)
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ui.accent.copy(alpha = 0.28f), Spectra.Indigo))), contentAlignment = Alignment.Center) {
+                        if (icon != null) Image(icon, app.label, Modifier.fillMaxSize(0.6f))
+                    }
+                }
+                CardStyle.COMPACT -> {
+                    val icon = rememberIcon(app.packageName)
+                    Row(
+                        Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(ui.accent.copy(alpha = 0.30f), Spectra.SurfaceHigh))).padding(horizontal = h * 0.18f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (icon != null) Image(icon, null, Modifier.size(h * 0.66f).clip(RoundedCornerShape(h * 0.2f)))
+                        Spacer(Modifier.width(10.dp))
+                        Text(app.label, color = Color.White, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 CardStyle.ICON -> {
                     val icon = rememberIcon(app.packageName)
@@ -173,7 +205,7 @@ fun AppCard(
             }
             if (moving) MoveBadge(Modifier.align(Alignment.TopCenter))
         }
-        if (style != CardStyle.POSTER) CardLabel(app.label, focused, always = style == CardStyle.ICON)
+        if (style != CardStyle.POSTER && style != CardStyle.COMPACT) CardLabel(app.label, focused, always = style == CardStyle.ICON || style == CardStyle.SQUARE)
     }
 }
 
@@ -198,7 +230,7 @@ fun ActionCard(
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(w)) {
         FocusCard(
             modifier = Modifier.width(w).height(h).onFocusChanged { focused = it.hasFocus },
-            corner = if (style == CardStyle.ICON) w / 2 else ui.corner.dp,
+            corner = if (style == CardStyle.ICON) w / 2 else if (style == CardStyle.COMPACT) h / 2 else ui.corner.dp,
             onFocus = onFocus,
             onLongClick = onLongClick,
             onClick = onClick
@@ -241,13 +273,21 @@ private fun IconOnGradient(app: AppInfo) {
 fun ProgramCard(
     program: TvProgram,
     height: Dp,
+    /** Formato escolhido na seção (null = o formato que o app publicou). */
+    format: CardStyle? = null,
     onFocus: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val ui = LocalUi.current
     val ctx = LocalContext.current
-    val aspect = program.aspectRatio.coerceIn(0.66f, 1.78f)
+    val aspect = when (format) {
+        CardStyle.POSTER -> 2f / 3f
+        CardStyle.SQUARE, CardStyle.ICON -> 1f
+        CardStyle.WIDE -> 21f / 9f
+        CardStyle.BANNER, CardStyle.COMPACT -> 16f / 9f
+        null -> program.aspectRatio.coerceIn(0.66f, 1.78f)
+    }
     val width = height * aspect
     val request = remember(program.imageUri, ui.highQualityImages) {
         ImageRequest.Builder(ctx)
@@ -258,6 +298,7 @@ fun ProgramCard(
     }
     FocusCard(
         modifier = Modifier.width(width).height(height),
+        corner = if (format == CardStyle.ICON) height / 2 else ui.corner.dp,
         onFocus = onFocus,
         onLongClick = onLongClick,
         onClick = onClick

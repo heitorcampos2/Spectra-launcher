@@ -114,7 +114,14 @@ private fun SectionPanelContent(s: HomeSection, vm: MainViewModel, settings: Lau
         item { OptionRow("Grade", "▦", value = onOff(s.grid)) { upd { it.copy(grid = !it.grid) } } }
         item { OptionRow("Linha deslizante", "↔", value = onOff(s.sliding)) { upd { it.copy(sliding = !it.sliding) } } }
         item { OptionRow("Exibir nome", "▭", value = onOff(s.showTitle)) { upd { it.copy(showTitle = !it.showTitle) } } }
-        item { AdjustRow("Tamanho", SIZE_LABELS[size]) { d -> upd { it.copy(cardSize = ((it.cardSize ?: settings.cardSize) + d).coerceIn(0, 3)) } } }
+        item { AdjustRow("Tamanho", sizeLabel(size)) { d -> upd { it.copy(cardSize = ((it.cardSize ?: settings.cardSize) + d).coerceIn(MIN_SIZE, MAX_SIZE)) } } }
+        val programs = s.type in setOf(SectionType.APP_BLOCK, SectionType.CHANNEL, SectionType.WATCH_NEXT, SectionType.SUGGESTIONS, SectionType.SUBSCRIPTIONS, SectionType.APP_CONTENT)
+        if (programs) item {
+            val l = listOf<CardStyle?>(null) + CardStyle.entries
+            AdjustRow("Formato dos cartões", s.cardStyle?.label ?: "Automático (do app)") { d ->
+                upd { it.copy(cardStyle = l[(l.indexOf(it.cardStyle) + d).mod(l.size)]) }
+            }
+        }
         if (isApps || s.type == SectionType.SHORTCUTS || s.type == SectionType.INPUTS) item {
             AdjustRow("Estilo dos cartões", (s.cardStyle ?: settings.cardStyle).label) { d ->
                 val l = CardStyle.entries
@@ -128,13 +135,27 @@ private fun SectionPanelContent(s: HomeSection, vm: MainViewModel, settings: Lau
                 vm.launch { setSectionDisabled("$pkg|*", settings.isAppContentEnabled(pkg)) }
             } }
             com.hazagou.spectra.data.SectionKind.entries.forEach { k ->
-                item { OptionRow(k.label, when (k) {
+                item { OptionRow(if (k == com.hazagou.spectra.data.SectionKind.CHANNELS) "Canais (todos)" else k.label, when (k) {
                         com.hazagou.spectra.data.SectionKind.CONTINUE -> "▶"
                         com.hazagou.spectra.data.SectionKind.RECOMMENDED -> "★"
                         com.hazagou.spectra.data.SectionKind.CHANNELS -> "📺"
                     }, value = onOff(settings.isSectionEnabled(pkg, k))) {
                     vm.launch { setSectionDisabled("$pkg|${k.key}", settings.isSectionEnabled(pkg, k)) }
                 } }
+            }
+            // cada canal do app, um por um
+            val tvSt = vm.tvState.value as? com.hazagou.spectra.data.TvContentRepository.State.Ready
+            val appChannels = tvSt?.byPackage?.get(pkg)?.channels.orEmpty()
+            if (appChannels.isNotEmpty() && settings.isSectionEnabled(pkg, com.hazagou.spectra.data.SectionKind.CHANNELS)) {
+                item { Text("Canais deste app", color = LocalUi.current.accent, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp, top = 6.dp)) }
+                appChannels.forEach { ch ->
+                    item(key = "chtoggle_${ch.id}") {
+                        val on = settings.isChannelEnabled(pkg, ch.name)
+                        OptionRow("   ${ch.name}", "·", value = onOff(on) + "  (${ch.programs.size})") {
+                            vm.launch { setSectionDisabled("$pkg|ch:${ch.name}", on) }
+                        }
+                    }
+                }
             }
         }
         item { OptionRow("Mover seção para cima", "⇡") { vm.moveSectionVisible(s.id, -1) } }
@@ -191,7 +212,7 @@ private fun ManageApps(s: HomeSection, vm: MainViewModel, settings: LauncherSett
                 FocusCard(
                     Modifier.weight(1f), corner = 14.dp, focusScale = 1.02f, glow = false,
                     background = Color.White.copy(alpha = 0.05f),
-                    onAdjust = { d -> vm.sectionsDo { update(s.id) { it.copy(appSizes = it.appSizes + (a.packageName to (sz + d).coerceIn(0, 3))) } } },
+                    onAdjust = { d -> vm.sectionsDo { update(s.id) { it.copy(appSizes = it.appSizes + (a.packageName to (sz + d).coerceIn(MIN_SIZE, MAX_SIZE))) } } },
                     onClick = {
                         if (on) vm.sectionsDo { removeApp(s.id, a.packageName) } else vm.sectionsDo { addApp(s.id, a.packageName) }
                     }
@@ -202,7 +223,7 @@ private fun ManageApps(s: HomeSection, vm: MainViewModel, settings: LauncherSett
                         Spacer(Modifier.width(10.dp))
                         Text(a.label, color = if (on) Color.White else Spectra.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        Text(if (f) "◀ ${SIZE_LABELS[sz]} ▶" else SIZE_LABELS[sz], color = Color.White, style = MaterialTheme.typography.labelMedium)
+                        Text(if (f) "◀ ${sizeLabel(sz)} ▶" else sizeLabel(sz), color = Color.White, style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.width(10.dp))
                         Text(if (on) "✔" else "○", color = Color.White)
                     }

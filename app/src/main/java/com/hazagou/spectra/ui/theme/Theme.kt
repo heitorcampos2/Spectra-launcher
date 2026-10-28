@@ -106,7 +106,7 @@ fun LauncherSettings.toUiConfig(dynamicAccent: Color?): UiConfig {
     return UiConfig(
         accent = acc,
         corner = corner,
-        focusScale = when (cardSize) { 0 -> 1.12f; 2, 3 -> 1.07f; else -> 1.1f },
+        focusScale = when { cardSize <= 0 -> 1.12f; cardSize >= 2 -> 1.06f; else -> 1.1f },
         animations = performance != PerformanceMode.MAX_PERFORMANCE,
         highQualityImages = performance == PerformanceMode.MAX_QUALITY,
         showLabels = showLabels,

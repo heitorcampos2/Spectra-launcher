@@ -330,8 +330,9 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                     onAdjust = { d -> vm.launch { setCardStyle(CardStyle.entries.let { l -> l[(l.indexOf(s.cardStyle) + d).mod(l.size)] }) } }) {
                     vm.launch { setCardStyle(CardStyle.entries.toList().next(s.cardStyle)) }
                 } }
-                item { SettingRow("Tamanho dos cartões", listOf("P", "M", "G", "GG")[s.cardSize.coerceIn(0, 3)], "Padrão; cada seção e cada cartão podem ter o seu",
-                    onAdjust = { d -> vm.launch { setCardSize((s.cardSize + d).coerceIn(0, 3)) } }) { vm.launch { setCardSize((s.cardSize + 1) % 4) } } }
+                item { SettingRow("Tamanho dos cartões", com.hazagou.spectra.ui.home.sizeLabel(s.cardSize), "PPP, PP, P, M, G, GG ou XL • cada seção e cada cartão podem ter o seu",
+                    onAdjust = { d -> vm.launch { setCardSize(s.cardSize + d) } }) {
+                    vm.launch { setCardSize(if (s.cardSize >= com.hazagou.spectra.ui.home.MAX_SIZE) com.hazagou.spectra.ui.home.MIN_SIZE else s.cardSize + 1) } } }
                 item { Stepper("Cantos arredondados", s.corner, 0..32, 2, " dp") { v -> vm.launch { setCorner(v) } } }
                 item { Toggle("Nome do app ao focar", s.showLabels) { vm.launch { setShowLabels(it) } } }
             }

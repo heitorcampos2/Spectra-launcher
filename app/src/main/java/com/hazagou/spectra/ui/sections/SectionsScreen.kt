@@ -210,8 +210,8 @@ fun SectionEditDialog(section: HomeSection, vm: MainViewModel, settings: Launche
             val opts = listOf<CardStyle?>(null) + CardStyle.entries
             upd { it.copy(cardStyle = opts[(opts.indexOf(it.cardStyle) + 1) % opts.size]) }
         }
-        OptionRow("Tamanho dos cartões", "⤢", value = s.cardSize?.let { listOf("Pequeno", "Médio", "Grande")[it] } ?: "Padrão") {
-            val opts = listOf<Int?>(null, 0, 1, 2)
+        OptionRow("Tamanho dos cartões", "⤢", value = s.cardSize?.let { com.hazagou.spectra.ui.home.sizeLabel(it) } ?: "Padrão") {
+            val opts = listOf<Int?>(null) + (com.hazagou.spectra.ui.home.MIN_SIZE..com.hazagou.spectra.ui.home.MAX_SIZE).toList()
             upd { it.copy(cardSize = opts[(opts.indexOf(it.cardSize) + 1) % opts.size]) }
         }
         when (s.type) {
