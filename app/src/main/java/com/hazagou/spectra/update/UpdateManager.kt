@@ -266,6 +266,10 @@ class InstallResultReceiver : BroadcastReceiver() {
             return
         }
         val app = context.applicationContext as? com.hazagou.spectra.SpectraApp ?: return
+        if (intent.getBooleanExtra(SintoniaSuggestion.EXTRA, false)) {
+            app.sintonia.onInstallResult(status, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
+            return
+        }
         app.updates.onInstallResult(status, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
     }
 }

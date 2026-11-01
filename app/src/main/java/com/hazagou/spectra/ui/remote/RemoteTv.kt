@@ -42,6 +42,7 @@ import com.hazagou.spectra.ui.components.rememberAutoFocus
 import com.hazagou.spectra.ui.home.toast
 import com.hazagou.spectra.ui.theme.LocalUi
 import com.hazagou.spectra.ui.theme.Spectra
+import com.hazagou.spectra.update.SintoniaState
 import com.hazagou.spectra.update.UpdateManager
 import com.hazagou.spectra.update.UpdateState
 import kotlinx.coroutines.delay
@@ -221,6 +222,53 @@ fun DownloadPageCard() {
             Spacer(Modifier.height(6.dp))
             Text("Escaneie para abrir a página com o botão de download do APK mais recente.",
                 color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+
+// ============================================================================ sugestão: Sintonia
+
+/** Sugestão na seção Atualizações: instalar (ou abrir) o Sintonia, player de IPTV do mesmo criador. */
+@Composable
+fun SintoniaCard(vm: MainViewModel) {
+    val st by vm.sintonia.state.collectAsState()
+    val accent = LocalUi.current.accent
+    val installed = remember(st) { vm.sintonia.installedVersion() }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Spectra.Surface).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.spectra_logo), "Sintonia",
+                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Sugestão: Sintonia", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text("Player de IPTV do mesmo criador: TV ao vivo, filmes e séries, com \"Continuar assistindo\" e canais aqui na tela inicial.",
+                    color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        when (val s = st) {
+            SintoniaState.Checking -> Text("Procurando a versão mais nova no GitHub…", color = Spectra.TextSecondary)
+            is SintoniaState.Downloading -> {
+                Text("Baixando o Sintonia ${s.version}… ${(s.progress * 100).toInt()}%", color = Color.White)
+                LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth(), color = accent)
+            }
+            is SintoniaState.Installing -> Text("Abrindo o instalador… confirme na tela da TV.", color = Color.White)
+            is SintoniaState.Done -> Text("✔ Sintonia instalado.", color = Color(0xFF86EFAC))
+            is SintoniaState.Failed -> Text(s.message, color = Color(0xFFFCA5A5))
+            SintoniaState.Idle -> if (installed != null) Text("Instalado (versão $installed).", color = Spectra.TextSecondary)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (installed != null) {
+                PillButton("Abrir o Sintonia", leading = "▶", selected = true) { vm.sintonia.open() }
+                PillButton("Instalar versão mais nova", leading = "⬇") { vm.sintonia.installLatest(vm.updates) }
+            } else {
+                PillButton("Instalar o Sintonia", leading = "⬇", selected = true) { vm.sintonia.installLatest(vm.updates) }
+            }
         }
     }
 }

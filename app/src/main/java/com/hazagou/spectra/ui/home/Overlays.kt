@@ -167,7 +167,10 @@ private fun PanelHeader(settings: LauncherSettings) {
     val ui = LocalUi.current
     Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.35f)).padding(22.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimalIconView(com.hazagou.spectra.data.AnimalIcon.DRAGON, ui.accent, Modifier.size(46.dp))
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.spectra_logo), "Spectra",
+                Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("SPECTRA", color = Color.White, style = MaterialTheme.typography.headlineSmall)

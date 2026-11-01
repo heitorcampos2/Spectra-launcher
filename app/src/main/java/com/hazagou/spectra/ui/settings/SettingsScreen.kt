@@ -623,6 +623,7 @@ private fun CategoryPane(c: Cat, vm: MainViewModel, s: LauncherSettings, actions
                 item { com.hazagou.spectra.ui.remote.UpdateCard(vm) }
                 item { Toggle("Verificar ao abrir", autoUpdate, "Procura versão nova no GitHub no máximo a cada 6 horas") { vm.updates.setAutoCheck(it) } }
                 item { com.hazagou.spectra.ui.remote.DownloadPageCard() }
+                item { com.hazagou.spectra.ui.remote.SintoniaCard(vm) }
                 item { Text("As versões são publicadas automaticamente pelo GitHub a cada mudança no projeto. A primeira instalação precisa liberar \"instalar apps desconhecidos\" para o Spectra.",
                     color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall) }
             }

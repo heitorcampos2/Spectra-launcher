@@ -37,6 +37,7 @@ class SpectraApp : Application(), ImageLoaderFactory {
     lateinit var system: SystemRepository private set
     lateinit var remote: RemoteStore private set
     lateinit var updates: UpdateManager private set
+    lateinit var sintonia: com.hazagou.spectra.update.SintoniaSuggestion private set
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -50,6 +51,7 @@ class SpectraApp : Application(), ImageLoaderFactory {
         system = SystemRepository(this)
         remote = RemoteStore(this)
         updates = UpdateManager(this)
+        sintonia = com.hazagou.spectra.update.SintoniaSuggestion(this)
         // Servidor do controle remoto: liga/desliga sozinho conforme a configuração (PIN + ativado)
         appScope.launch { remote.config.collect { RemoteServer.sync(this@SpectraApp, remote) } }
         appScope.launch { runCatching { sections.migrateToV4() } }

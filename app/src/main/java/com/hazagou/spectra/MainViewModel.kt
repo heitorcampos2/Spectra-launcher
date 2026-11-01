@@ -93,6 +93,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val system = core.system
     val remote = core.remote
     val updates = core.updates
+    val sintonia = core.sintonia
 
     private val refreshTick = MutableStateFlow(0)
     val screen = MutableStateFlow(Screen.HOME)

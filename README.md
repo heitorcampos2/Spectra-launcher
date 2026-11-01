@@ -17,6 +17,8 @@ Desenvolvedor: **Heitor Campos** ([@heitorcampos2](https://github.com/heitorcamp
 
 ## Novidades
 - **Novo visual padrão** (instalação nova): menus e cartões escuros em **Grafite** (sem tom roxo), **wallpaper de paisagem** já aplicado, **sem título** e **sem ícone de usuário** no topo. Tudo continua ajustável em Configurações.
+- **Novo ícone e logo**: o dragão agora é o ícone do app, o banner da TV e o logo no topo do menu lateral.
+- **Sugestão: Sintonia** em Configurações › Atualizações: instala (ou abre) o Sintonia, player de IPTV do mesmo criador, direto do GitHub.
 
 ## Novidades da 3.1
 - **Controle remoto pelo celular**: na TV, MENU ☰ › *Parear celular (QR code)*. Defina um PIN e escaneie o QR code com o app **Spectra Controle** no celular (mesma rede Wi-Fi). Tem direcional com deslizar, OK (segure para opções), voltar, início, menu, mídia, volume (inclusive pelos botões de volume do celular), teclado para digitar na TV e lista de apps para abrir.

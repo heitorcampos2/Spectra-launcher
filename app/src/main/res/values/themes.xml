@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="spectra_bg">#0E0B2A</color>
+    <color name="spectra_bg">#08090F</color>
     <color name="spectra_accent">#E0135A</color>
 
     <style name="Theme.Spectra" parent="android:Theme.Material.NoActionBar">
