@@ -103,11 +103,11 @@ data class LauncherSettings(
     val title: String = "TV",
     val titleEmoji: String = "👻",
     val titleAnimal: AnimalIcon = AnimalIcon.DRAGON,
-    val showTitle: Boolean = true,
+    val showTitle: Boolean = false,          // padrão: sem título
     val showClock: Boolean = true,
     val profileName: String = "User",
     val profileAvatar: String = "animal:DRAGON",
-    val showProfile: Boolean = true,
+    val showProfile: Boolean = false,        // padrão: sem ícone de usuário
     // ---- barra de status
     val showWifi: Boolean = true,
     val showNotifications: Boolean = true,
@@ -124,7 +124,7 @@ data class LauncherSettings(
     val bgMode: BgMode = BgMode.WALLPAPER,
     val bgColor1: Long = 0xFF17154FL,
     val bgColor2: Long = 0xFF5B1B6EL,
-    val surfaceTone: SurfaceTone = SurfaceTone.INDIGO,
+    val surfaceTone: SurfaceTone = SurfaceTone.GRAPHITE,   // padrão: menus escuros, sem tom roxo
     // ---- fonte
     val font: FontChoice = FontChoice.DEFAULT,
     val fontBold: Boolean = false,
@@ -270,6 +270,7 @@ class SettingsRepository(private val context: Context) {
         val inputNames = stringSetPreferencesKey("input_names")
         val castPackage = stringPreferencesKey("cast_package")
         val askDefault = booleanPreferencesKey("ask_default")
+        val defaultWallSeeded = booleanPreferencesKey("default_wall_seeded")
         val googleApiKey = stringPreferencesKey("google_api_key")
         val googleCx = stringPreferencesKey("google_cx")
     }
@@ -422,6 +423,15 @@ class SettingsRepository(private val context: Context) {
     suspend fun setRowSpacing(v: Int) = edit { it[K.rowSpacing] = v.coerceIn(0, 48) }
     suspend fun setStartMargin(v: Int) = edit { it[K.startMargin] = v.coerceIn(16, 120) }
     suspend fun setCardSpacing(v: Int) = edit { it[K.cardSpacing] = v.coerceIn(6, 40) }
+    /** Wallpaper de paisagem que vem com o app: aplicado uma única vez, só se nenhum foi escolhido. */
+    suspend fun seedDefaultWallpaper(path: () -> String?) {
+        context.dataStore.edit { p ->
+            if (p[K.defaultWallSeeded] == true) return@edit
+            p[K.defaultWallSeeded] = true
+            if (p[K.wallpaperPath] == null) path()?.let { p[K.wallpaperPath] = it }
+        }
+    }
+
     suspend fun setWallpaperPath(v: String?) = edit { if (v == null) it.remove(K.wallpaperPath) else it[K.wallpaperPath] = v }
     suspend fun setWallpaperMotion(v: WallpaperMotion) = edit { it[K.wallpaperMotion] = v.name }
     suspend fun setWallTransition(v: WallTransition) = edit { it[K.wallTransition] = v.name }

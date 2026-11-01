@@ -15,6 +15,9 @@ Desenvolvedor: **Heitor Campos** ([@heitorcampos2](https://github.com/heitorcamp
 > Depois disso, atualize pelo próprio app: **MENU ☰ › Atualizações › Atualizar agora**.
 > Todas as versões ficam em [Releases](https://github.com/heitorcampos2/Spectra-launcher/releases).
 
+## Novidades
+- **Novo visual padrão** (instalação nova): menus e cartões escuros em **Grafite** (sem tom roxo), **wallpaper de paisagem** já aplicado, **sem título** e **sem ícone de usuário** no topo. Tudo continua ajustável em Configurações.
+
 ## Novidades da 3.1
 - **Controle remoto pelo celular**: na TV, MENU ☰ › *Parear celular (QR code)*. Defina um PIN e escaneie o QR code com o app **Spectra Controle** no celular (mesma rede Wi-Fi). Tem direcional com deslizar, OK (segure para opções), voltar, início, menu, mídia, volume (inclusive pelos botões de volume do celular), teclado para digitar na TV e lista de apps para abrir.
   - Sem o app no celular? A câmera comum lê o QR e abre o controle no navegador.

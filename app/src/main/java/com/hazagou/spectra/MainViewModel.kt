@@ -286,6 +286,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        // Primeira abertura: paisagem como wallpaper padrão
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            settingsRepo.seedDefaultWallpaper { wallRepo.defaultWallpaper()?.absolutePath }
+        }
         // Cada app com canais/continuar vira uma seção própria (configurável e móvel como as outras)
         viewModelScope.launch {
             combine(allContentApps, sections) { c, secs -> c to secs }.collect { (c, secs) ->

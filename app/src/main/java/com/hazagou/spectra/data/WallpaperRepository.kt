@@ -81,6 +81,13 @@ class WallpaperRepository(private val context: Context) {
 
     private val dir: File get() = File(context.filesDir, "wallpapers").apply { mkdirs() }
 
+    /** Copia o wallpaper de paisagem que vem no app (assets/wallpapers/paisagem.jpg). */
+    fun defaultWallpaper(): File? = runCatching {
+        val f = File(dir, "paisagem-spectra.jpg")
+        if (!f.exists() || f.length() == 0L) context.assets.open("wallpapers/paisagem.jpg").use { i -> f.outputStream().use { i.copyTo(it) } }
+        f
+    }.getOrNull()
+
     fun isVideo(f: File) = f.extension.lowercase() in setOf("mp4", "mkv", "webm", "3gp", "mov")
     fun isGif(f: File) = f.extension.lowercase() == "gif"
 

@@ -168,14 +168,14 @@ fun AppCard(
                 }
                 CardStyle.SQUARE -> {
                     val icon = rememberIcon(app.packageName)
-                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ui.accent.copy(alpha = 0.28f), Spectra.Indigo))), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ui.accent.copy(alpha = 0.28f), ui.surface.copy(alpha = 1f)))), contentAlignment = Alignment.Center) {
                         if (icon != null) Image(icon, app.label, Modifier.fillMaxSize(0.6f))
                     }
                 }
                 CardStyle.COMPACT -> {
                     val icon = rememberIcon(app.packageName)
                     Row(
-                        Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(ui.accent.copy(alpha = 0.30f), Spectra.SurfaceHigh))).padding(horizontal = h * 0.18f),
+                        Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(ui.accent.copy(alpha = 0.30f), ui.surfaceHigh))).padding(horizontal = h * 0.18f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (icon != null) Image(icon, null, Modifier.size(h * 0.66f).clip(RoundedCornerShape(h * 0.2f)))
@@ -185,14 +185,14 @@ fun AppCard(
                 }
                 CardStyle.ICON -> {
                     val icon = rememberIcon(app.packageName)
-                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Spectra.SurfaceHigh, Spectra.Indigo))), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ui.surfaceHigh, ui.surface.copy(alpha = 1f)))), contentAlignment = Alignment.Center) {
                         if (icon != null) Image(icon, app.label, Modifier.fillMaxSize(0.66f))
                     }
                 }
                 CardStyle.POSTER -> {
                     val icon = rememberIcon(app.packageName)
                     Column(
-                        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ui.accent.copy(alpha = 0.35f), Spectra.Indigo))),
+                        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ui.accent.copy(alpha = 0.35f), ui.surface.copy(alpha = 1f)))),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -237,7 +237,7 @@ fun ActionCard(
         ) { f ->
             Column(
                 Modifier.fillMaxSize().background(
-                    Brush.linearGradient(listOf(base.copy(alpha = if (f) 0.75f else 0.45f), Spectra.Indigo.copy(alpha = 0.9f)))
+                    Brush.linearGradient(listOf(base.copy(alpha = if (f) 0.75f else 0.45f), ui.surface.copy(alpha = 1f).copy(alpha = 0.9f)))
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -258,9 +258,10 @@ fun ActionCard(
 @Composable
 private fun IconOnGradient(app: AppInfo) {
     val icon = rememberIcon(app.packageName)
-    val accent = LocalUi.current.accent
+    val ui = LocalUi.current
+    val accent = ui.accent
     Row(
-        Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Spectra.SurfaceHigh, accent.copy(alpha = 0.35f)))).padding(12.dp),
+        Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ui.surfaceHigh, accent.copy(alpha = 0.35f)))).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) Image(icon, null, Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)))
