@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -227,47 +228,93 @@ fun DownloadPageCard() {
 }
 
 
-// ============================================================================ sugestão: Sintonia
+// ============================================================================ sugestões de apps
 
 /** Sugestão na seção Atualizações: instalar (ou abrir) o Sintonia, player de IPTV do mesmo criador. */
 @Composable
-fun SintoniaCard(vm: MainViewModel) {
-    val st by vm.sintonia.state.collectAsState()
+fun SintoniaCard(vm: MainViewModel) = SuggestionCard(
+    vm.sintonia, vm.updates,
+    "Player de IPTV do mesmo criador: TV ao vivo, filmes e séries, com \"Continuar assistindo\" e canais aqui na tela inicial."
+) {
+    androidx.compose.foundation.Image(
+        androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.sintonia_logo), "Sintonia",
+        Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))
+    )
+}
+
+/** Sugestão na seção Atualizações: SmartTube (estável), YouTube para TV de código aberto. */
+@Composable
+fun SmartTubeCard(vm: MainViewModel) {
+    val st by vm.smartTube.state.collectAsState()
+    val icon = remember(st) { vm.smartTube.installedIcon() }
+    SuggestionCard(
+        vm.smartTube, vm.updates,
+        "YouTube para Android TV, de código aberto (github.com/yuliskov/SmartTube): pula anúncios e patrocínios, sem propaganda e com 4K/60 fps. Versão estável."
+    ) {
+        if (icon != null) {
+            androidx.compose.foundation.Image(
+                remember(icon) { icon.toBitmapPainter() }, "SmartTube",
+                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))
+            )
+        } else {
+            androidx.compose.foundation.layout.Box(
+                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE53935)),
+                contentAlignment = Alignment.Center
+            ) { Text("▶", color = Color.White, fontSize = 26.sp) }
+        }
+    }
+}
+
+private fun android.graphics.drawable.Drawable.toBitmapPainter(): androidx.compose.ui.graphics.painter.Painter {
+    val w = intrinsicWidth.takeIf { it > 0 } ?: 192
+    val h = intrinsicHeight.takeIf { it > 0 } ?: 192
+    val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    setBounds(0, 0, w, h); draw(c)
+    return androidx.compose.ui.graphics.painter.BitmapPainter(bmp.asImageBitmap())
+}
+
+@Composable
+private fun SuggestionCard(
+    sug: com.hazagou.spectra.update.SintoniaSuggestion,
+    updates: UpdateManager,
+    description: String,
+    logo: @Composable () -> Unit,
+) {
+    val st by sug.state.collectAsState()
     val accent = LocalUi.current.accent
-    val installed = remember(st) { vm.sintonia.installedVersion() }
+    val installed = remember(st) { sug.installedVersion() }
+    val name = sug.name
+    fun ver(v: String) = if (v.firstOrNull()?.isDigit() == true) " $v" else ""
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Spectra.Surface).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.sintonia_logo), "Sintonia",
-                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))
-            )
+            logo()
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Sugestão: Sintonia", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                Text("Player de IPTV do mesmo criador: TV ao vivo, filmes e séries, com \"Continuar assistindo\" e canais aqui na tela inicial.",
-                    color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text("Sugestão: $name", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text(description, color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
         }
         when (val s = st) {
             SintoniaState.Checking -> Text("Procurando a versão mais nova no GitHub…", color = Spectra.TextSecondary)
             is SintoniaState.Downloading -> {
-                Text("Baixando o Sintonia ${s.version}… ${(s.progress * 100).toInt()}%", color = Color.White)
+                Text("Baixando o $name${ver(s.version)}… ${(s.progress * 100).toInt()}%", color = Color.White)
                 LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth(), color = accent)
             }
             is SintoniaState.Installing -> Text("Abrindo o instalador… confirme na tela da TV.", color = Color.White)
-            is SintoniaState.Done -> Text("✔ Sintonia instalado.", color = Color(0xFF86EFAC))
+            is SintoniaState.Done -> Text("✔ $name instalado.", color = Color(0xFF86EFAC))
             is SintoniaState.Failed -> Text(s.message, color = Color(0xFFFCA5A5))
             SintoniaState.Idle -> if (installed != null) Text("Instalado (versão $installed).", color = Spectra.TextSecondary)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (installed != null) {
-                PillButton("Abrir o Sintonia", leading = "▶", selected = true) { vm.sintonia.open() }
-                PillButton("Instalar versão mais nova", leading = "⬇") { vm.sintonia.installLatest(vm.updates) }
+                PillButton("Abrir o $name", leading = "▶", selected = true) { sug.open() }
+                PillButton("Instalar versão mais nova", leading = "⬇") { sug.installLatest(updates) }
             } else {
-                PillButton("Instalar o Sintonia", leading = "⬇", selected = true) { vm.sintonia.installLatest(vm.updates) }
+                PillButton("Instalar o $name", leading = "⬇", selected = true) { sug.installLatest(updates) }
             }
         }
     }

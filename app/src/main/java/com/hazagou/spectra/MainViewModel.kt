@@ -94,6 +94,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val remote = core.remote
     val updates = core.updates
     val sintonia = core.sintonia
+    val smartTube = core.smartTube
 
     private val refreshTick = MutableStateFlow(0)
     val screen = MutableStateFlow(Screen.HOME)
