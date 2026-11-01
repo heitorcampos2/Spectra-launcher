@@ -241,7 +241,7 @@ fun SintoniaCard(vm: MainViewModel) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.spectra_logo), "Sintonia",
+                androidx.compose.ui.res.painterResource(com.hazagou.spectra.R.drawable.sintonia_logo), "Sintonia",
                 Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))
             )
             Spacer(Modifier.width(14.dp))
