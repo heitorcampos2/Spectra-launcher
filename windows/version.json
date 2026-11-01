@@ -1,0 +1,12 @@
+{
+  "version": "1.0.1",
+  "date": "2026-11-01",
+  "notes": [
+    "Apps novos aparecem sozinhos, sem fechar e abrir o Spectra (inclusive apps instalados pelo Chrome/Edge)",
+    "Primeira versão para Windows: seções, canais do Sintonia, wallpaper e as mesmas opções do Android TV"
+  ],
+  "files": {
+    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.1.zip"
+  },
+  "page": "https://github.com/heitorcampos2/Spectra-launcher/tree/main/windows"
+}

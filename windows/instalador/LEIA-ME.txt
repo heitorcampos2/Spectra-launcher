@@ -1,0 +1,39 @@
+﻿SPECTRA PARA WINDOWS
+====================
+Desenvolvido por Heitor Campos (GitHub: heitorcampos2)
+
+A tela inicial do Spectra Launcher (Android TV), agora no PC: seus apps do
+Windows, os apps instalados pelo Chrome/Edge e os canais do Sintonia
+("Ver a seguir", canais favoritos, filmes e séries) em fileiras.
+
+INSTALAR
+1. Extraia este .zip (botão direito > Extrair tudo).
+2. Dê dois cliques em "Instalar Spectra.bat".
+   - Se o Windows avisar "O Windows protegeu o computador", clique em
+     "Mais informações" > "Executar assim mesmo".
+   - Se o Python não estiver instalado, o instalador instala sozinho (winget).
+3. O Spectra abre em janela própria (Chrome ou Edge). Fica um ícone na
+   Área de Trabalho e no Menu Iniciar (pasta Spectra).
+
+USAR
+- Setas / mouse / controle (Xbox ou PlayStation): navegar
+- Enter ou clique: abrir o app
+- Botão direito, tecla Menu ou segurar Enter: opções do cartão
+  (mover, tamanho, adicionar a outra seção, trocar ícone...)
+- Esc: menu lateral (seções, canais, wallpaper, configurações)
+- / ou começar a digitar: pesquisar
+- F11: tela cheia
+
+CANAIS DO SINTONIA
+Com o Sintonia instalado neste PC, "Ver a seguir" mostra o que você está
+assistindo. Clique para continuar no Sintonia. Sem o Sintonia:
+Configurações > Atualizações > Instalar o Sintonia.
+
+ATALHOS NO MENU INICIAR (pasta Spectra)
+- Spectra / Spectra em tela cheia
+- Fechar o Spectra
+- Desinstalar o Spectra
+
+Onde ficam as coisas:
+- Programa: %LOCALAPPDATA%\Spectra
+- Configurações, wallpapers e ícones: %APPDATA%\Spectra
