@@ -139,12 +139,15 @@ fun HomeScreen(vm: MainViewModel, settings: LauncherSettings, onRequestEpgPermis
     val rowFocus = remember { HashMap<String, FocusRequester>() }
     fun requester(key: String) = rowFocus.getOrPut(key) { FocusRequester() }
 
+    // v3.2: Home volta ao topo na hora — sem espera fixa; tenta focar o 1º cartão já no próximo quadro
     LaunchedEffect(resetSignal) {
         focusedRow = 0
+        focusedKey = null
         listState.scrollToItem(0)
-        delay(150)
-        rows.firstOrNull { it !is HomeRowModel.ContentHeader && it !is HomeRowModel.Permission }?.let {
-            runCatching { requester(it.key).requestFocus() }
+        val first = rows.firstOrNull { it !is HomeRowModel.ContentHeader && it !is HomeRowModel.Permission } ?: return@LaunchedEffect
+        for (i in 0 until 12) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { requester(first.key).requestFocus() }.isSuccess) break
         }
     }
 
@@ -461,8 +464,12 @@ private fun ItemsRow(
                 }
             }
         } else {
+            val rowState = rememberLazyListState()
+            val reset by vm.homeResetSignal.collectAsState()
+            LaunchedEffect(reset) { if (reset > 0 && rowState.firstVisibleItemIndex + rowState.firstVisibleItemScrollOffset > 0) rowState.scrollToItem(0) }
             SlidingProvider(sec.sliding, settings.startMargin) {
                 LazyRow(
+                    state = rowState,
                     modifier = Modifier.fillMaxWidth().focusRestorer(),
                     contentPadding = PaddingValues(horizontal = settings.startMargin.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(settings.cardSpacing.dp)
@@ -544,8 +551,12 @@ private fun ProgramsRow(
                 }
             }
         } else {
+            val rowState = rememberLazyListState()
+            val reset by vm.homeResetSignal.collectAsState()
+            LaunchedEffect(reset) { if (reset > 0 && rowState.firstVisibleItemIndex + rowState.firstVisibleItemScrollOffset > 0) rowState.scrollToItem(0) }
             SlidingProvider(sec?.sliding ?: true, settings.startMargin) {
                 LazyRow(
+                    state = rowState,
                     modifier = Modifier.fillMaxWidth().focusRestorer(),
                     contentPadding = PaddingValues(horizontal = settings.startMargin.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(settings.cardSpacing.dp)

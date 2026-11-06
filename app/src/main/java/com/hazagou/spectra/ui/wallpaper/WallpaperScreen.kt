@@ -103,6 +103,8 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
 
     var source by remember { mutableStateOf(WallSource.CATEGORIES) }
     var category by remember { mutableStateOf(WallpaperRepository.CATEGORIES.first()) }
+    var group by remember { mutableStateOf(WallpaperRepository.GROUPS.first().first) }
+    var catSort by remember { mutableStateOf(WallpaperRepository.CatSort.RELEVANCE) }
     var rank by remember { mutableStateOf(com.hazagou.spectra.data.WallRank.TOP_MONTH) }
     var res by remember { mutableStateOf(com.hazagou.spectra.data.WallRes.FHD) }
     var theme by remember { mutableStateOf<WallCategory?>(null) }
@@ -124,13 +126,13 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
         jobHolder[0]?.cancel()
         if (reset) { results.clear(); page = 0 }
         loading = true; error = null
-        val src = source; val cat = category; val q = query; val hq = onlyHq; val pg = page
+        val src = source; val cat = category; val q = query; val hq = onlyHq; val pg = page; val cs = catSort
         val rk = rank; val rs = res; val th = theme
         jobHolder[0] = scope.launch {
             val me = coroutineContext[Job]
             try {
                 val list = when (src) {
-                    WallSource.CATEGORIES -> repo.byCategory(cat, pg + 1)
+                    WallSource.CATEGORIES -> repo.byCategory(cat, pg + 1, cs)
                     WallSource.RANKED -> repo.ranked(rk, rs, th, pg + 1)
                     WallSource.GOOGLE -> repo.searchGoogle(q, pg, settings.googleApiKey, settings.googleCx, hq)
                     WallSource.SAVED, WallSource.SLIDESHOW, WallSource.GALLERY -> emptyList()
@@ -196,7 +198,7 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
         }
     }
 
-    LaunchedEffect(source, category, rank, res, theme) {
+    LaunchedEffect(source, category, catSort, rank, res, theme) {
         if (source == WallSource.CATEGORIES || source == WallSource.RANKED) load(true)
         if (source == WallSource.SAVED || source == WallSource.SLIDESHOW) savedFiles = repo.saved()
         if (source == WallSource.GALLERY) {
@@ -238,13 +240,37 @@ fun WallpaperScreen(vm: MainViewModel, settings: LauncherSettings) {
             // ---------------- filtros por fonte
             when (source) {
                 WallSource.CATEGORIES -> {
+                    // v3.2: grupos → categorias do grupo → ordem
                     LazyRow(
                         Modifier.fillMaxWidth().focusRestorer(),
-                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 16.dp),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 16.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(WallpaperRepository.CATEGORIES, key = { it.id }) { c: WallCategory ->
+                        items(WallpaperRepository.GROUPS, key = { "g_" + it.first }) { g ->
+                            PillButton(g.first, leading = g.second, selected = g.first == group) {
+                                if (group != g.first) {
+                                    group = g.first
+                                    WallpaperRepository.CATEGORIES.firstOrNull { it.group == g.first }?.let { category = it }
+                                }
+                            }
+                        }
+                    }
+                    LazyRow(
+                        Modifier.fillMaxWidth().focusRestorer(),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 6.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(WallpaperRepository.CATEGORIES.filter { it.group == group }, key = { it.id }) { c: WallCategory ->
                             PillButton(c.label, leading = c.emoji, selected = c == category) { category = c }
+                        }
+                    }
+                    LazyRow(
+                        Modifier.fillMaxWidth().focusRestorer(),
+                        contentPadding = PaddingValues(start = 56.dp, end = 56.dp, top = 6.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(WallpaperRepository.CatSort.entries.toList(), key = { "s_" + it.name }) { so ->
+                            PillButton(so.label, leading = so.emoji, selected = so == catSort) { catSort = so }
                         }
                     }
                 }

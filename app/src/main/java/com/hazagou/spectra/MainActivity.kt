@@ -120,10 +120,17 @@ class MainActivity : ComponentActivity(), LauncherActions {
         }
     }
 
+    private var lastRefresh = 0L
+
     override fun onResume() {
         super.onResume()
         foreground = java.lang.ref.WeakReference(this)
-        vm.refresh()
+        // v3.2: a volta para a tela inicial aparece primeiro; os canais são relidos logo depois (no máximo a cada 20 s)
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastRefresh > 20_000L) {
+            lastRefresh = now
+            window.decorView.postDelayed({ vm.refresh() }, 700)
+        }
         vm.resumeTick.value++
         vm.updates.checkIfDue()
     }

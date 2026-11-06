@@ -24,7 +24,7 @@ data class WallpaperItem(
     val resolutionLabel get() = if (width > 0) "${width}×${height}" else ""
 }
 
-data class WallCategory(val id: String, val label: String, val emoji: String, val query: String?)
+data class WallCategory(val id: String, val label: String, val emoji: String, val query: String?, val group: String = "Destaques")
 
 enum class WallSource(val label: String) {
     CATEGORIES("Categorias"), RANKED("Classificação"), GOOGLE("Google Imagens"), SAVED("Meus wallpapers"), GALLERY("Galeria"), SLIDESHOW("Apresentação")
@@ -54,28 +54,90 @@ class WallpaperRepository(private val context: Context) {
         const val UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
+        /** Grupos da galeria (v3.2): cada grupo tem várias categorias. */
+        val GROUPS = listOf(
+            "Destaques" to "✨", "Natureza" to "🌿", "Espaço e céu" to "🌌", "Lugares" to "🏙️", "Arte e estilo" to "🎨",
+            "Entretenimento" to "🎮", "Veículos" to "🏎️", "Animais" to "🐯", "Estações e datas" to "🍂",
+        )
+
         val CATEGORIES = listOf(
-            WallCategory("top", "Em alta", "🔥", null),
-            WallCategory("anime", "Anime", "🌸", "anime"),
-            WallCategory("dark", "Dark / AMOLED", "🌑", "dark minimalism"),
-            WallCategory("space", "Espaço", "🌌", "space"),
-            WallCategory("nature", "Natureza", "🌿", "nature landscape"),
-            WallCategory("minimal", "Minimalista", "◻️", "minimalism"),
-            WallCategory("cyberpunk", "Cyberpunk", "🌆", "cyberpunk"),
-            WallCategory("games", "Games", "🎮", "video games"),
-            WallCategory("fantasy", "Fantasia", "🐉", "fantasy art"),
-            WallCategory("animals", "Animais", "🐯", "animals"),
-            WallCategory("cars", "Carros", "🏎️", "cars"),
-            WallCategory("abstract", "Abstrato", "🌀", "abstract"),
-            WallCategory("movies", "Filmes", "🎬", "movies"),
-            WallCategory("city", "Cidades", "🏙️", "city night"),
-            WallCategory("ocean", "Oceano", "🌊", "ocean"),
-            WallCategory("mountains", "Montanhas", "🏔️", "mountains"),
-            WallCategory("aurora", "Aurora", "🌠", "aurora"),
-            WallCategory("synthwave", "Retrô / Synthwave", "🌇", "synthwave"),
-            WallCategory("rain", "Chuva / Aconchego", "🌧️", "rain"),
-            WallCategory("flowers", "Flores", "🌺", "flowers"),
-            WallCategory("digital", "Arte digital", "🎨", "digital art"),
+            // Destaques
+            WallCategory("top", "Em alta", "🔥", null, "Destaques"),
+            WallCategory("dark", "Dark / AMOLED", "🌑", "dark minimalism", "Destaques"),
+            WallCategory("minimal", "Minimalista", "◻️", "minimalism", "Destaques"),
+            WallCategory("4k", "Paisagens 4K", "🖼️", "landscape 4k", "Destaques"),
+            WallCategory("colorful", "Coloridos", "🌈", "colorful", "Destaques"),
+            WallCategory("gradient", "Degradês", "🟣", "gradient", "Destaques"),
+            // Natureza
+            WallCategory("nature", "Natureza", "🌿", "nature landscape", "Natureza"),
+            WallCategory("ocean", "Oceano", "🌊", "ocean", "Natureza"),
+            WallCategory("mountains", "Montanhas", "🏔️", "mountains", "Natureza"),
+            WallCategory("forest", "Florestas", "🌲", "forest", "Natureza"),
+            WallCategory("beach", "Praias", "🏖️", "beach", "Natureza"),
+            WallCategory("waterfall", "Cachoeiras", "💧", "waterfall", "Natureza"),
+            WallCategory("lake", "Lagos", "🏞️", "lake", "Natureza"),
+            WallCategory("desert", "Desertos", "🏜️", "desert", "Natureza"),
+            WallCategory("sunset", "Pôr do sol", "🌅", "sunset", "Natureza"),
+            WallCategory("flowers", "Flores", "🌺", "flowers", "Natureza"),
+            WallCategory("rain", "Chuva / Aconchego", "🌧️", "rain", "Natureza"),
+            // Espaço e céu
+            WallCategory("space", "Espaço", "🌌", "space", "Espaço e céu"),
+            WallCategory("galaxy", "Galáxias", "🌀", "galaxy", "Espaço e céu"),
+            WallCategory("planets", "Planetas", "🪐", "planet", "Espaço e céu"),
+            WallCategory("earth", "Terra vista do espaço", "🌍", "earth from space", "Espaço e céu"),
+            WallCategory("moon", "Lua", "🌕", "moon", "Espaço e céu"),
+            WallCategory("aurora", "Aurora", "🌠", "aurora", "Espaço e céu"),
+            WallCategory("stars", "Céu estrelado", "✨", "starry sky", "Espaço e céu"),
+            WallCategory("clouds", "Nuvens", "☁️", "clouds", "Espaço e céu"),
+            // Lugares
+            WallCategory("city", "Cidades à noite", "🏙️", "city night", "Lugares"),
+            WallCategory("skyline", "Horizonte urbano", "🌆", "skyline", "Lugares"),
+            WallCategory("architecture", "Arquitetura", "🏛️", "architecture", "Lugares"),
+            WallCategory("brazil", "Brasil", "🇧🇷", "brazil", "Lugares"),
+            WallCategory("japan", "Japão", "⛩️", "japan", "Lugares"),
+            WallCategory("europe", "Europa", "🏰", "europe", "Lugares"),
+            WallCategory("roads", "Estradas", "🛣️", "road", "Lugares"),
+            WallCategory("bridges", "Pontes", "🌉", "bridge", "Lugares"),
+            // Arte e estilo
+            WallCategory("abstract", "Abstrato", "🌀", "abstract", "Arte e estilo"),
+            WallCategory("digital", "Arte digital", "🎨", "digital art", "Arte e estilo"),
+            WallCategory("fantasy", "Fantasia", "🐉", "fantasy art", "Arte e estilo"),
+            WallCategory("cyberpunk", "Cyberpunk", "🌃", "cyberpunk", "Arte e estilo"),
+            WallCategory("synthwave", "Retrô / Synthwave", "🌇", "synthwave", "Arte e estilo"),
+            WallCategory("neon", "Neon", "💡", "neon", "Arte e estilo"),
+            WallCategory("pixel", "Pixel art", "👾", "pixel art", "Arte e estilo"),
+            WallCategory("painting", "Pintura", "🖌️", "painting", "Arte e estilo"),
+            WallCategory("lowpoly", "Low poly / geométrico", "🔷", "low poly", "Arte e estilo"),
+            WallCategory("scifi", "Ficção científica", "🚀", "science fiction", "Arte e estilo"),
+            // Entretenimento
+            WallCategory("anime", "Anime", "🌸", "anime", "Entretenimento"),
+            WallCategory("games", "Games", "🎮", "video games", "Entretenimento"),
+            WallCategory("movies", "Filmes", "🎬", "movies", "Entretenimento"),
+            WallCategory("series", "Séries", "📺", "tv series", "Entretenimento"),
+            WallCategory("comics", "Quadrinhos", "💥", "comics", "Entretenimento"),
+            WallCategory("music", "Música", "🎵", "music", "Entretenimento"),
+            WallCategory("sports", "Esportes", "⚽", "sports", "Entretenimento"),
+            // Veículos
+            WallCategory("cars", "Carros", "🏎️", "cars", "Veículos"),
+            WallCategory("supercars", "Superesportivos", "🏁", "supercar", "Veículos"),
+            WallCategory("classic", "Clássicos", "🚙", "classic car", "Veículos"),
+            WallCategory("motorcycles", "Motos", "🏍️", "motorcycle", "Veículos"),
+            WallCategory("planes", "Aviões", "✈️", "aircraft", "Veículos"),
+            WallCategory("trains", "Trens", "🚆", "train", "Veículos"),
+            // Animais
+            WallCategory("animals", "Animais", "🐯", "animals", "Animais"),
+            WallCategory("cats", "Gatos", "🐱", "cats", "Animais"),
+            WallCategory("dogs", "Cachorros", "🐶", "dogs", "Animais"),
+            WallCategory("birds", "Pássaros", "🦜", "birds", "Animais"),
+            WallCategory("wildlife", "Vida selvagem", "🦁", "wildlife", "Animais"),
+            WallCategory("sea", "Vida marinha", "🐋", "underwater", "Animais"),
+            // Estações e datas
+            WallCategory("autumn", "Outono", "🍂", "autumn", "Estações e datas"),
+            WallCategory("winter", "Inverno / Neve", "❄️", "winter snow", "Estações e datas"),
+            WallCategory("spring", "Primavera", "🌷", "spring", "Estações e datas"),
+            WallCategory("summer", "Verão", "☀️", "summer", "Estações e datas"),
+            WallCategory("christmas", "Natal", "🎄", "christmas", "Estações e datas"),
+            WallCategory("halloween", "Halloween", "🎃", "halloween", "Estações e datas"),
         )
     }
 
@@ -93,11 +155,23 @@ class WallpaperRepository(private val context: Context) {
 
     // ---------------------------------------------------------------- Categorias (Wallhaven, só SFW, ≥1080p)
 
-    suspend fun byCategory(cat: WallCategory, page: Int = 1): List<WallpaperItem> = withContext(Dispatchers.IO) {
+    /** v3.2: ordem dentro da categoria (relevância, top, recentes, mais favoritados, surpresa). */
+    enum class CatSort(val label: String, val emoji: String) { RELEVANCE("Relevância", "🎯"), TOP("Top do mês", "🏆"), NEW("Recentes", "🆕"), FAV("Mais favoritados", "❤️"), RANDOM("Surpresa", "🎲") }
+    private var catSeed = java.util.UUID.randomUUID().toString().filter { it.isLetterOrDigit() }.take(6)
+
+    suspend fun byCategory(cat: WallCategory, page: Int = 1, sort: CatSort = CatSort.RELEVANCE): List<WallpaperItem> = withContext(Dispatchers.IO) {
+        if (sort == CatSort.RANDOM && page == 1) catSeed = java.util.UUID.randomUUID().toString().filter { it.isLetterOrDigit() }.take(6)
         val base = "https://wallhaven.cc/api/v1/search?categories=111&purity=100&atleast=1920x1080&ratios=16x9,16x10,21x9&page=$page"
-        val url = if (cat.query == null) "$base&sorting=toplist&topRange=1M"
-        else "$base&sorting=relevance&q=${enc(cat.query)}"
-        parseWallhaven(httpGet(url))
+        val q = cat.query?.let { "&q=${enc(it)}" } ?: ""
+        val order = when {
+            cat.query == null && sort == CatSort.RELEVANCE -> "&sorting=toplist&topRange=1M"
+            sort == CatSort.TOP -> "&sorting=toplist&topRange=1M"
+            sort == CatSort.NEW -> "&sorting=date_added&order=desc"
+            sort == CatSort.FAV -> "&sorting=favorites&order=desc"
+            sort == CatSort.RANDOM -> "&sorting=random&seed=$catSeed"
+            else -> "&sorting=relevance"
+        }
+        parseWallhaven(httpGet(base + order + q))
     }
 
     private var randomSeed = java.util.UUID.randomUUID().toString().take(6).filter { it.isLetterOrDigit() }
