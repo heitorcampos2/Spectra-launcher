@@ -1,0 +1,23 @@
+11-07 13:47:40.248  2920  2968 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:47:42.845  2920  2984 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:47:47.548  2920  2985 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:47:53.254  2920  2956 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:48:03.689  3780  3814 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:48:05.999  3780  3827 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=4, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:48:07.815  3780  3811 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:48:29.563  3780  3825 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:49:00.308  3780  3805 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=5, channelApps=[com.google.android.youtube.tv], previewRows=23, watchNextRows=0, error=null)
+11-07 13:49:09.894  4829  4875 I TestPublisher: canal Canal de Teste: content://android.media.tv/channel/6
+11-07 13:49:09.923  4829  4875 I TestPublisher: canal Inscrições: content://android.media.tv/channel/7
+11-07 13:49:09.951  4829  4875 I TestPublisher: programa Filme de teste 1: content://android.media.tv/preview_program/24
+11-07 13:49:09.953  4829  4875 I TestPublisher: programa Filme de teste 2: content://android.media.tv/preview_program/25
+11-07 13:49:09.955  4829  4875 I TestPublisher: programa Filme de teste 3: content://android.media.tv/preview_program/26
+11-07 13:49:09.956  4829  4875 I TestPublisher: programa Vídeo inscrito 1: content://android.media.tv/preview_program/27
+11-07 13:49:09.958  4829  4875 I TestPublisher: programa Vídeo inscrito 2: content://android.media.tv/preview_program/28
+11-07 13:49:09.959  4829  4875 I TestPublisher: programa Vídeo inscrito 3: content://android.media.tv/preview_program/29
+11-07 13:49:09.961  4829  4875 I TestPublisher: ver a seguir: content://android.media.tv/watch_next_program/1
+11-07 13:49:09.963  4829  4875 I TestPublisher: ver a seguir: content://android.media.tv/watch_next_program/2
+11-07 13:49:09.963  4829  4875 I TestPublisher: publicado ok
+11-07 13:49:10.680  3780  3825 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)
+11-07 13:49:17.404  4898  4919 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)
+11-07 13:49:19.371  4898  4946 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✔ concedida, channelRows=7, channelApps=[com.google.android.youtube.tv, com.hazagou.spectra.testpublisher], previewRows=29, watchNextRows=2, error=null)

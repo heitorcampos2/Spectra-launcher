@@ -1,0 +1,16 @@
++ echo '== canais vistos pelo shell'
+== canais vistos pelo shell
++ adb shell content query --uri content://android.media.tv/channel --projection _id:package_name:display_name:browsable:searchable
+No result found.
++ echo '== ver a seguir (shell)'
+== ver a seguir (shell)
++ adb shell content query --uri content://android.media.tv/watch_next_program --projection _id:package_name:title
+No result found.
++ echo '== permissões do Spectra'
+== permissões do Spectra
++ adb shell dumpsys package com.hazagou.spectra.debug
++ grep -iE 'EPG|TV_LISTINGS'
+      com.android.providers.tv.permission.READ_EPG_DATA
+      android.permission.READ_TV_LISTINGS
+      com.android.providers.tv.permission.READ_EPG_DATA: granted=true
+        android.permission.READ_TV_LISTINGS: granted=true
