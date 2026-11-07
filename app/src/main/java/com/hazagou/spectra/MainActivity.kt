@@ -86,6 +86,9 @@ class MainActivity : ComponentActivity(), LauncherActions {
         /** Activity visível agora (o controle remoto injeta as teclas nela). */
         @Volatile var foreground: java.lang.ref.WeakReference<MainActivity>? = null
             private set
+        /** v3.2: última imagem da tela do Spectra (cobre a TV enquanto ele volta, sem piscar a tela do sistema). */
+        @Volatile var lastFrame: android.graphics.Bitmap? = null
+            private set
         private val GOOGLE_TV_LAUNCHERS = listOf("com.google.android.apps.tv.launcherx", "com.google.android.tvlauncher")
     }
 
@@ -105,6 +108,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createdAt = android.os.SystemClock.elapsedRealtime()
         setContent { Root() }
         handleOpenExtra(intent)
     }
@@ -121,6 +125,7 @@ class MainActivity : ComponentActivity(), LauncherActions {
     }
 
     private var lastRefresh = 0L
+    private var createdAt = 0L
 
     override fun onResume() {
         super.onResume()
@@ -133,11 +138,35 @@ class MainActivity : ComponentActivity(), LauncherActions {
         }
         vm.resumeTick.value++
         vm.updates.checkIfDue()
+        // tira a capa do serviço de acessibilidade quando a tela já está desenhada (recém-criada: espera carregar)
+        val fresh = now - createdAt < 1500
+        val ch = android.view.Choreographer.getInstance()
+        ch.postFrameCallback {
+            ch.postFrameCallback {
+                if (fresh) window.decorView.postDelayed({ com.hazagou.spectra.service.HomeOverrideService.instance?.hideCover() }, 350)
+                else com.hazagou.spectra.service.HomeOverrideService.instance?.hideCover()
+            }
+        }
     }
 
     override fun onPause() {
         if (foreground?.get() === this) foreground = null
+        captureFrame()
         super.onPause()
+    }
+
+    /** Guarda a imagem da tela atual (rápido, direto da superfície da janela). */
+    private fun captureFrame() {
+        val v = window.decorView
+        if (v.width <= 0 || v.height <= 0 || !v.isAttachedToWindow) return
+        runCatching {
+            val w = minOf(v.width, 1280)
+            val h = (v.height.toLong() * w / v.width).toInt().coerceAtLeast(1)
+            val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+            android.view.PixelCopy.request(window, bmp, { r ->
+                if (r == android.view.PixelCopy.SUCCESS) lastFrame = bmp
+            }, android.os.Handler(android.os.Looper.getMainLooper()))
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

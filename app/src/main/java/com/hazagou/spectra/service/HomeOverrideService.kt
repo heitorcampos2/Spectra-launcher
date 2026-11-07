@@ -1,12 +1,19 @@
 package com.hazagou.spectra.service
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityOptions
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
+import android.widget.ImageView
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.hazagou.spectra.MainActivity
@@ -14,6 +21,10 @@ import com.hazagou.spectra.MainActivity
 /**
  * Em TVs que não deixam trocar o launcher padrão (ex.: Google TV / Chromecast), este serviço detecta
  * quando a tela inicial original é aberta (botão Home) e abre o Spectra no lugar.
+ *
+ * v3.2: o próprio botão Home do controle é interceptado (a tela inicial original nem chega a abrir).
+ * Se ela aparecer por outro caminho (ex.: ao sair de um app aberto fora do Spectra), uma imagem da última
+ * tela do Spectra cobre a TV na hora, até o Spectra voltar — sem piscar a tela do sistema.
  *
  * Também executa os comandos do controle remoto pelo celular em outros apps
  * (mover o foco, OK, voltar e digitar no campo de texto selecionado).
@@ -38,15 +49,103 @@ class HomeOverrideService : AccessibilityService() {
     )
     private var stockLaunchers: Set<String> = knownStockLaunchers
     private var lastLaunch = 0L
+    private val main = Handler(Looper.getMainLooper())
+    private var cover: View? = null
+    private val hideLater = Runnable { hideCover() }
+    private var homeDown = false
+    private var homeLong = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         stockLaunchers = knownStockLaunchers + resolveOtherHomes()
+        // garante o filtro de teclas e eventos sem atraso mesmo se a TV guardou a configuração antiga do serviço
+        runCatching {
+            serviceInfo = serviceInfo.apply {
+                flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+                notificationTimeout = 0
+            }
+        }
+    }
+
+    // ================================================================ botão Home
+
+    /** Botão Home do controle: abre o Spectra direto. Segurar Home abre o painel da TV (como no sistema). */
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_HOME) return false
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                if (event.repeatCount == 0) { homeDown = true; homeLong = false }
+                else if (!homeLong && event.repeatCount >= 1 && (event.flags and KeyEvent.FLAG_LONG_PRESS != 0 || event.eventTime - event.downTime > 600)) {
+                    homeLong = true
+                    performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+                }
+            }
+            KeyEvent.ACTION_UP -> {
+                if (homeDown && !homeLong && !event.isCanceled) openSpectra(cover = true)
+                homeDown = false
+            }
+        }
+        return true
+    }
+
+    /** Traz o Spectra para a frente, sem animação. */
+    fun openSpectra(cover: Boolean) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastLaunch < 400) return
+        lastLaunch = now
+        val spectraOnTop = MainActivity.foreground?.get() != null
+        if (cover && !spectraOnTop) showCover()
+        runCatching {
+            val i = Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                .putExtra(MainActivity.EXTRA_FROM_HOME_OVERRIDE, true)
+            startActivity(i, ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle())
+        }.onFailure { hideCover() }
+    }
+
+    // ================================================================ capa (imagem do Spectra por cima da TV)
+
+    private fun showCover() {
+        main.removeCallbacks(hideLater)
+        if (cover == null) {
+            val v = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.FIT_XY
+                setBackgroundColor(0xFF08090F.toInt())
+            }
+            val lp = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                PixelFormat.OPAQUE
+            ).apply { windowAnimations = 0 }
+            if (runCatching { (getSystemService(WINDOW_SERVICE) as WindowManager).addView(v, lp) }.isFailure) return
+            cover = v
+        }
+        (cover as? ImageView)?.apply {
+            animate().cancel(); alpha = 1f
+            setImageBitmap(MainActivity.lastFrame)
+        }
+        main.postDelayed(hideLater, 1500)   // segurança: nunca fica presa na tela
+    }
+
+    /** Chamado pelo Spectra quando já está desenhado na tela. */
+    fun hideCover() {
+        main.post {
+            main.removeCallbacks(hideLater)
+            val v = cover ?: return@post
+            cover = null
+            v.animate().alpha(0f).setDuration(120).withEndAction {
+                runCatching { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(v) }
+            }.start()
+        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         instance = null
+        cover?.let { v -> runCatching { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(v) } }
+        cover = null
         return super.onUnbind(intent)
     }
 
@@ -59,7 +158,7 @@ class HomeOverrideService : AccessibilityService() {
 
     fun remoteGlobal(action: String): Boolean = when (action) {
         "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
-        "home" -> performGlobalAction(GLOBAL_ACTION_HOME)
+        "home" -> { openSpectra(cover = true); true }   // v3.2: direto no Spectra, sem passar pela tela do sistema
         else -> false
     }
 
@@ -144,16 +243,8 @@ class HomeOverrideService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg !in stockLaunchers) return
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastLaunch < 700) return
-        lastLaunch = now
-        runCatching {
-            startActivity(
-                Intent(this, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                    .putExtra(MainActivity.EXTRA_FROM_HOME_OVERRIDE, true)
-            )
-        }
+        // a tela inicial original apareceu (ex.: saiu de um app aberto fora do Spectra): cobre e traz o Spectra
+        openSpectra(cover = true)
     }
 
     override fun onInterrupt() = Unit
