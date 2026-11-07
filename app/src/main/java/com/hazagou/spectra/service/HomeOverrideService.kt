@@ -118,7 +118,7 @@ class HomeOverrideService : AccessibilityService() {
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                PixelFormat.OPAQUE
+                PixelFormat.TRANSLUCENT
             ).apply { windowAnimations = 0 }
             if (runCatching { (getSystemService(WINDOW_SERVICE) as WindowManager).addView(v, lp) }.isFailure) return
             cover = v
@@ -127,7 +127,7 @@ class HomeOverrideService : AccessibilityService() {
             animate().cancel(); alpha = 1f
             setImageBitmap(MainActivity.lastFrame)
         }
-        main.postDelayed(hideLater, 1500)   // segurança: nunca fica presa na tela
+        main.postDelayed(hideLater, 2000)   // segurança: nunca fica presa na tela
     }
 
     /** Chamado pelo Spectra quando já está desenhado na tela. */
