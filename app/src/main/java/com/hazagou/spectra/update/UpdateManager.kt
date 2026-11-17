@@ -108,7 +108,61 @@ class UpdateManager(private val context: Context) {
         }
     }
 
+    /**
+     * 3.1.29: primeiro pelo próprio site do GitHub (sem limite de consultas): o link releases/latest
+     * redireciona para a versão mais nova e o releases.atom traz título e novidades. A API
+     * (api.github.com, limitada a 60 consultas por hora por rede) fica só como reserva.
+     */
     private suspend fun fetchLatest(): ReleaseInfo = withContext(Dispatchers.IO) {
+        runCatching { fetchFromSite() }.getOrElse { siteError ->
+            runCatching { fetchFromApi() }.getOrElse { throw siteError }
+        }
+    }
+
+    private fun fetchFromSite(): ReleaseInfo {
+        val c = URL(PAGE).openConnection() as HttpURLConnection
+        c.instanceFollowRedirects = false
+        c.setRequestProperty("User-Agent", "SpectraLauncher/${BuildConfig.VERSION_NAME}")
+        c.connectTimeout = 8000; c.readTimeout = 10000
+        val code: Int; val location: String?
+        try { code = c.responseCode; location = c.getHeaderField("Location") } finally { c.disconnect() }
+        if (code !in 300..399 || location == null) error("GitHub respondeu $code")
+        val tag = java.net.URLDecoder.decode(location.substringAfter("/releases/tag/", "").substringBefore('?'), "UTF-8")
+        if (tag.isBlank()) error("nenhuma versão publicada ainda")
+
+        // título, data e novidades pelo feed (se falhar, segue só com a versão)
+        var title = "Spectra Launcher ${tag.trimStart('v', 'V')}"; var notes = ""; var date = ""
+        runCatching {
+            val f = URL("https://github.com/$REPO/releases.atom").openConnection() as HttpURLConnection
+            f.setRequestProperty("User-Agent", "SpectraLauncher/${BuildConfig.VERSION_NAME}")
+            f.connectTimeout = 8000; f.readTimeout = 10000
+            val xml = try { f.inputStream.bufferedReader().use { it.readText() } } finally { f.disconnect() }
+            val entry = Regex("<entry>(.*?)</entry>", RegexOption.DOT_MATCHES_ALL).findAll(xml)
+                .map { it.groupValues[1] }.firstOrNull { it.contains("/releases/tag/$tag<") || it.contains("/releases/tag/$tag\"") }
+            if (entry != null) {
+                Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(entry)?.groupValues?.get(1)?.let { title = unescape(it).trim() }
+                Regex("<updated>(.*?)</updated>").find(entry)?.groupValues?.get(1)?.let { date = it.take(10) }
+                Regex("<content[^>]*>(.*?)</content>", RegexOption.DOT_MATCHES_ALL).find(entry)?.groupValues?.get(1)?.let { html ->
+                    notes = unescape(unescape(html).replace(Regex("<br\\s*/?>|</p>|</li>"), "\n").replace(Regex("<li>"), "• ").replace(Regex("<[^>]+>"), ""))
+                        .lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+                }
+            }
+        }
+        // guarda no mesmo formato da API para reaproveitar o parse() e o cache
+        val json = JSONObject()
+            .put("tag_name", tag).put("name", title).put("body", notes).put("published_at", date)
+            .put("html_url", "https://github.com/$REPO/releases/tag/$tag")
+            .put("assets", org.json.JSONArray().put(JSONObject().put("name", assetName).put("size", 0)
+                .put("browser_download_url", "https://github.com/$REPO/releases/download/$tag/$assetName")))
+        val info = parse(json)
+        prefs.edit().putLong("last", System.currentTimeMillis()).putString("cached", json.toString()).apply()
+        return info
+    }
+
+    private fun unescape(s: String) = s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
+        .replace("&#39;", "'").replace("&apos;", "'").replace("&amp;", "&")
+
+    private fun fetchFromApi(): ReleaseInfo {
         val c = URL(API).openConnection() as HttpURLConnection
         c.setRequestProperty("Accept", "application/vnd.github+json")
         c.setRequestProperty("User-Agent", "SpectraLauncher/${BuildConfig.VERSION_NAME}")
@@ -123,7 +177,7 @@ class UpdateManager(private val context: Context) {
             val json = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
             val info = parse(json)
             prefs.edit().putLong("last", System.currentTimeMillis()).putString("cached", json.toString()).apply()
-            info
+            return info
         } finally { c.disconnect() }
     }
 
