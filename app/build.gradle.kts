@@ -91,6 +91,9 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0") { isTransitive = false }
 
+    // Controle de outros apps pela depuração local da TV (ADB em 127.0.0.1), sem servidor ADB
+    implementation("dev.mobile:dadb:1.2.10")
+
     // Wallpaper em vídeo
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")

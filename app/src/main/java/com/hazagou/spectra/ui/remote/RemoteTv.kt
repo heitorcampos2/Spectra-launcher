@@ -114,14 +114,26 @@ fun RemotePairDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                     System.currentTimeMillis() - last < 60_000 -> "✔ Celular conectado"
                     else -> "Aguardando celular"
                 })
-                if (!vm.homeOverrideEnabled()) Text(
-                    "Para controlar também outros apps, ative \"Spectra — Botão Home e controle\" em Acessibilidade.",
+                val adb = remember(tick) { com.hazagou.spectra.remote.AdbRemote.statusText() }
+                val adbReady = remember(tick) { com.hazagou.spectra.remote.AdbRemote.isReady() }
+                InfoLine("Outros apps", adb)
+                if (!adbReady) Text(
+                    "Para o celular controlar qualquer app (Android TV 11): Configurações › Preferências do dispositivo › Sobre › " +
+                        "toque 7 vezes em Build (ou Versão) até virar desenvolvedor; depois, em Opções do desenvolvedor, ligue \"Depuração USB\". " +
+                        "Volte aqui, toque em Conectar e, na pergunta \"Permitir depuração USB?\", marque \"Sempre permitir\" e aceite.",
                     color = Color(0xFFFDE68A), style = MaterialTheme.typography.bodySmall
+                )
+                if (!vm.homeOverrideEnabled()) Text(
+                    "Ative também \"Spectra — Botão Home e controle\" em Acessibilidade (botão Home e digitar texto).",
+                    color = Spectra.TextSecondary, style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PillButton("Fechar", selected = true, modifier = Modifier.focusRequester(first)) { onDismiss() }
                     PillButton("Trocar PIN", leading = "🔑") { askPin = true }
+                    if (!adbReady) PillButton("Conectar", leading = "🔌") {
+                        Thread { com.hazagou.spectra.remote.AdbRemote.ensure(ctx, waitMs = 30_000, forcePortCheck = true) }.start()
+                    }
                     if (cfg.enabled) PillButton("Desligar", leading = "✕") { vm.remote.setEnabled(false); onDismiss() }
                     else PillButton("Ligar", leading = "✔") { vm.remote.setEnabled(true) }
                 }

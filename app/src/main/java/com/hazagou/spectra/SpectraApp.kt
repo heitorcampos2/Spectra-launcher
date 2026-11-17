@@ -56,6 +56,8 @@ class SpectraApp : Application(), ImageLoaderFactory {
         smartTube = com.hazagou.spectra.update.SintoniaSuggestion.smartTube(this)
         // Servidor do controle remoto: liga/desliga sozinho conforme a configuração (PIN + ativado)
         appScope.launch { remote.config.collect { RemoteServer.sync(this@SpectraApp, remote) } }
+        // controle de outros apps pela depuração local: reconecta sozinho se a TV já autorizou antes
+        com.hazagou.spectra.remote.AdbRemote.warmUp(this)
         appScope.launch { runCatching { sections.migrateToV4() } }
         appScope.launch { runCatching { settings.migrateV4() } }
     }

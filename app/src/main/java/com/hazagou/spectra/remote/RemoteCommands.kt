@@ -20,7 +20,8 @@ data class CommandResult(val ok: Boolean, val message: String? = null) {
 /**
  * Executa os comandos recebidos do celular.
  *  • Spectra em primeiro plano → as teclas vão direto para o launcher (sempre funciona).
- *  • Outro app em primeiro plano → usa o serviço de acessibilidade "Spectra — Botão Home e controle".
+ *  • Outro app em primeiro plano → Android 13+: acessibilidade; qualquer Android: depuração local da TV
+ *    ([AdbRemote], funciona em todos os apps); por último, acessibilidade movendo o foco.
  *  • Mídia e volume → AudioManager (funciona em qualquer app).
  */
 object RemoteCommands {
@@ -28,7 +29,7 @@ object RemoteCommands {
     private val main = Handler(Looper.getMainLooper())
     private const val NEED_A11Y = "Para controlar outros apps, ative \"Spectra — Botão Home e controle\" em Acessibilidade na TV."
 
-    fun canControlOtherApps(): Boolean = HomeOverrideService.instance != null
+    fun canControlOtherApps(): Boolean = HomeOverrideService.instance != null || AdbRemote.isReady()
 
     fun key(ctx: Context, k: String): CommandResult {
         val audio = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -71,20 +72,30 @@ object RemoteCommands {
             if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true)
             if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true)
         }
-        // 2) outro app → acessibilidade (Android 13+ tem D-pad nativo; antes disso, foco pelos elementos da tela)
-        if (svc == null) return CommandResult(false, NEED_A11Y)
-        val ok = when (k) {
+        // 2) outro app, Android 13+: ações nativas de seta/OK/voltar da acessibilidade (rápidas, sem depuração)
+        if (svc != null && android.os.Build.VERSION.SDK_INT >= 33 && k != "menu" && k != "oklong") {
+            val ok = if (k == "back") svc.remoteGlobal("back") else svc.remoteDpad(k)
+            if (ok) return CommandResult(true)
+        }
+        // 3) outro app pela depuração local da TV: funciona em qualquer app (Android TV 11 incluído)
+        if (AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true)
+        // 4) último recurso: acessibilidade movendo o foco pelos elementos da tela (só alguns apps aceitam)
+        if (svc == null && AdbRemote.state == AdbRemote.State.NO_DEBUG) return CommandResult(false, NEED_A11Y + " Ou ligue a Depuração USB na TV para controlar qualquer app.")
+        val ok = svc != null && when (k) {
             "back" -> svc.remoteGlobal("back")
             "menu" -> svc.remoteGlobal("menu")
             else -> svc.remoteDpad(k)
         }
-        return if (ok) CommandResult(true) else CommandResult(false, "Este app não aceitou o comando")
+        return if (ok) CommandResult(true) else CommandResult(false, AdbRemote.hint())
     }
 
     fun text(ctx: Context, text: String): CommandResult {
-        val svc = HomeOverrideService.instance ?: return CommandResult(false, NEED_A11Y)
-        return if (svc.remoteText(text)) CommandResult(true)
-        else CommandResult(false, "Nenhum campo de texto selecionado na TV. Abra a busca do app e tente de novo.")
+        val svc = HomeOverrideService.instance
+        if (svc != null && svc.remoteText(text)) return CommandResult(true)
+        // apps que não expõem o campo para a acessibilidade: digita pela depuração local
+        if (AdbRemote.text(ctx, text)) return CommandResult(true)
+        if (svc == null) return CommandResult(false, NEED_A11Y)
+        return CommandResult(false, "Nenhum campo de texto selecionado na TV. Abra a busca do app e tente de novo.")
     }
 
     fun launch(ctx: Context, pkg: String): CommandResult {

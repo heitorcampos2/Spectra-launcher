@@ -87,7 +87,7 @@ fun OnboardingDialog(vm: MainViewModel, actions: LauncherActions, onFinish: () -
             )
             Step(
                 n = 4, ok = remoteOk, title = "Controle pelo celular em outros apps (opcional)",
-                text = "Ative \"Spectra — Botão Home e controle\" em Acessibilidade para o celular funcionar também fora do Spectra.",
+                text = "Ative \"Spectra — Botão Home e controle\" em Acessibilidade. No Android TV 11, para o celular controlar qualquer app, ligue também a Depuração USB (detalhes em Controle pelo celular).",
                 modifier = focusFor(3),
                 button = "Abrir Acessibilidade", onClick = { actions.openAccessibilitySettings() },
             )
