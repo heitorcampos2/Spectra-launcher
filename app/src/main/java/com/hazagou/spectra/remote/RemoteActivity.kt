@@ -449,10 +449,10 @@ class RemoteActivity : ComponentActivity() {
                         val d = minOf(W - 24.dp, H - fixed).coerceIn(150.dp, 300.dp)
                         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
                             if (warn) A11yWarning()
-                            KeyRow { Key("back", "Voltar", ::send, h = k); Key("home", "Início", ::send, h = k); Key("menu", "Menu", ::send, h = k) }
                             DPad(d, ::send, if (touchpad) { dx: Float, dy: Float -> synchronized(pending) { pending[0] += dx; pending[1] += dy } } else null)
                             if (hint) Text(if (touchpad) "Arraste no círculo para mover o cursor • OK toca • setas na borda rolam" else "Deslize no círculo para navegar • segure OK para opções",
                                 color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            KeyRow { Key("back", "Voltar", ::send, h = k); Key("home", "Início", ::send, h = k); Key("menu", "Menu", ::send, h = k) }
                             KeyRow { Key("voldown", "Vol −", ::send, h = k); Key("mute", "Mudo", ::send, h = k); Key("volup", "Vol +", ::send, h = k) }
                             KeyRow { Key("rew", null, ::send, h = k); Key("play", null, ::send, highlight = true, h = k); Key("ff", null, ::send, h = k) }
                             KeyRow { Key("prev", null, ::send, h = k); Key("settings", "Ajustes", ::send, h = k); Key("next", null, ::send, h = k) }
