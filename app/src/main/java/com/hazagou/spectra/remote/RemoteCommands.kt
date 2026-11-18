@@ -13,8 +13,11 @@ import org.json.JSONObject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-data class CommandResult(val ok: Boolean, val message: String? = null) {
-    fun toJson(): JSONObject = JSONObject().put("ok", ok).apply { if (message != null) put("message", message) }
+data class CommandResult(val ok: Boolean, val message: String? = null, val via: String? = null) {
+    fun toJson(): JSONObject = JSONObject().put("ok", ok).apply {
+        if (message != null) put("message", message)
+        if (via != null) put("via", via)
+    }
 }
 
 /**
@@ -75,8 +78,8 @@ object RemoteCommands {
         // 2) tablet/celular (tela de toque): setas rolam a tela e OK toca, pela acessibilidade.
         //    Com a depuração conectada (adb tcpip 5555), as teclas de verdade vão primeiro.
         if (svc != null && !svc.isTv && k != "back" && k != "menu") {
-            if (AdbRemote.isReady() && AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true)
-            if (svc.remoteTouch(k)) return CommandResult(true)
+            if (AdbRemote.isReady() && AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true, via = "tecla (depuração)")
+            svc.remoteTouch(k)?.let { return CommandResult(true, via = it) }
         }
         // 3) TV, Android 13+: ações nativas de seta/OK/voltar da acessibilidade (rápidas, sem depuração)
         if (svc != null && android.os.Build.VERSION.SDK_INT >= 33 && k != "menu" && k != "oklong") {

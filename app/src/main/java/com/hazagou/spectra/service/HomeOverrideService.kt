@@ -216,7 +216,7 @@ class HomeOverrideService : AccessibilityService() {
      * setas do Android não fazem nada visível: aqui ↑ ↓ ← → rolam a tela (lista, página, carrossel)
      * e OK toca no item selecionado ou no centro da tela.
      */
-    fun remoteTouch(key: String): Boolean {
+    fun remoteTouch(key: String): String? {
         val root = rootInActiveWindow
         if (key == "ok" || key == "oklong") {
             val focus = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { !it.isEditable }
@@ -224,11 +224,13 @@ class HomeOverrideService : AccessibilityService() {
             var n = focus
             val action = if (key == "oklong") AccessibilityNodeInfo.ACTION_LONG_CLICK else AccessibilityNodeInfo.ACTION_CLICK
             while (n != null) {
-                if ((key == "ok" && n.isClickable) || (key == "oklong" && n.isLongClickable)) { if (n.performAction(action)) return true; break }
+                if ((key == "ok" && n.isClickable) || (key == "oklong" && n.isLongClickable)) { if (n.performAction(action)) return "tocou no item"; break }
                 n = n.parent
             }
+            // sem item selecionado: OK do sistema (Enter) — serve para Ubuntu/Termux:X11, players e jogos
+            if (key == "ok" && Build.VERSION.SDK_INT >= 33 && performGlobalAction(GLOBAL_ACTION_DPAD_CENTER)) return "tecla OK"
             val r = screen()
-            return gesture(r.exactCenterX(), r.exactCenterY(), r.exactCenterX(), r.exactCenterY(), if (key == "oklong") 700L else 60L)
+            return if (gesture(r.exactCenterX(), r.exactCenterY(), r.exactCenterX(), r.exactCenterY(), if (key == "oklong") 700L else 60L)) "toque no centro" else null
         }
         val vertical = key == "up" || key == "down"
         val a = when (key) {
@@ -236,7 +238,7 @@ class HomeOverrideService : AccessibilityService() {
             "down" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
             "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
             "right" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
-            else -> return false
+            else -> return null
         }
         val forward = key == "down" || key == "right"
         if (root != null) {
@@ -244,26 +246,37 @@ class HomeOverrideService : AccessibilityService() {
             val all = ArrayList<AccessibilityNodeInfo>(); scrollables(root, all)
             fun area(n: AccessibilityNodeInfo) = Rect().also { n.getBoundsInScreen(it) }.let { it.width().toLong() * it.height() }
             val exact = all.filter { n -> n.actionList.any { it.id == a.id } }.maxByOrNull(::area)
-            if (exact != null && exact.performAction(a.id)) return true
+            if (exact != null && exact.performAction(a.id)) return "rolou a tela"
             // 2) listas antigas só conhecem "avançar/voltar": usa a maior delas no sentido certo
             val generic = all.filter { n ->
                 val r = Rect().also { n.getBoundsInScreen(it) }
                 if (vertical) r.height() >= r.width() / 2 else r.width() > r.height()
             }.maxByOrNull(::area)
             if (generic != null && generic.performAction(
-                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
+                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return "rolou a tela"
         }
-        // 3) sem lista acessível (jogos, vídeos, WebView): arrasta o dedo na tela
+        // 3) nada rolável na tela (Ubuntu no Termux:X11, players, jogos, WebView): seta de verdade do sistema
+        if (Build.VERSION.SDK_INT >= 33) {
+            val g = when (key) { "up" -> GLOBAL_ACTION_DPAD_UP; "down" -> GLOBAL_ACTION_DPAD_DOWN; "left" -> GLOBAL_ACTION_DPAD_LEFT; else -> GLOBAL_ACTION_DPAD_RIGHT }
+            if (performGlobalAction(g)) return "tecla de seta"
+        }
+        // 4) último recurso: arrasta o dedo na tela
         val r = screen()
         val cx = r.exactCenterX(); val cy = r.exactCenterY()
         val dx = r.width() * 0.3f; val dy = r.height() * 0.25f
-        return when (key) {
+        val ok = when (key) {
             "down" -> gesture(cx, cy + dy, cx, cy - dy)
             "up" -> gesture(cx, cy - dy, cx, cy + dy)
             "right" -> gesture(cx + dx, cy, cx - dx, cy)
             else -> gesture(cx - dx, cy, cx + dx, cy)
         }
+        return if (ok) "arrastou na tela" else null
     }
+
+    /** O Android só deixa arrastar/tocar na tela depois de religar o serviço com a permissão nova. */
+    val canGesture: Boolean get() = runCatching {
+        (serviceInfo.capabilities and android.accessibilityservice.AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
+    }.getOrDefault(false)
 
     private fun scrollables(n: AccessibilityNodeInfo, out: MutableList<AccessibilityNodeInfo>, depth: Int = 0) {
         if (depth > 40) return
@@ -275,7 +288,7 @@ class HomeOverrideService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= 30) (getSystemService(WINDOW_SERVICE) as WindowManager).currentWindowMetrics.bounds
         else resources.displayMetrics.let { Rect(0, 0, it.widthPixels, it.heightPixels) }
 
-    private fun gesture(x1: Float, y1: Float, x2: Float, y2: Float, ms: Long = 250L): Boolean = runCatching {
+    private fun gesture(x1: Float, y1: Float, x2: Float, y2: Float, ms: Long = 250L): Boolean = canGesture && runCatching {
         val path = Path().apply { moveTo(x1, y1); lineTo(x2, y2) }
         dispatchGesture(GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, ms)).build(), null, null)
     }.getOrDefault(false)

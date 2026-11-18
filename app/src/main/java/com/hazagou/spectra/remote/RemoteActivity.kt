@@ -267,19 +267,28 @@ class RemoteActivity : ComponentActivity() {
         var online by remember { mutableStateOf<Boolean?>(null) }
         var otherApps by remember { mutableStateOf(true) }
         var tab by remember { mutableStateOf(0) }
+        var tvInfo by remember { mutableStateOf("") }
+        var lastVia by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(client) {
             while (true) {
                 val info = client.info()
                 online = info != null
-                if (info != null) otherApps = info.optBoolean("controlsOtherApps", true)
+                if (info != null) {
+                    otherApps = info.optBoolean("controlsOtherApps", true)
+                    tvInfo = buildString {
+                        append("Spectra ").append(info.optString("version"))
+                        if (!info.optBoolean("a11y", true)) append(" · acessibilidade desligada")
+                        else if (info.optBoolean("touch") && !info.optBoolean("gestures", true)) append(" · religue a acessibilidade")
+                    }
+                }
                 delay(6000)
             }
         }
 
         fun send(k: String) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            scope.launch { val r = client.key(k); if (!r.ok) onMessage(r.message) }
+            scope.launch { val r = client.key(k); if (!r.ok) onMessage(r.message) else if (r.via != null) lastVia = r.via }
         }
 
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
@@ -291,6 +300,8 @@ class RemoteActivity : ComponentActivity() {
                         when (online) { true -> "● Conectado"; false -> "● Fora de alcance"; null -> "Conectando…" },
                         color = when (online) { true -> Color(0xFF4ADE80); false -> Color(0xFFFCA5A5); null -> Muted }, fontSize = 12.sp
                     )
+                    if (online == true && tvInfo.isNotBlank())
+                        Text(tvInfo + (lastVia?.let { " · $it" } ?: ""), color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(Modifier.width(64.dp))
             }

@@ -157,6 +157,11 @@ object RemoteServer {
         .put("app", "Spectra Launcher").put("version", BuildConfig.VERSION_NAME)
         .put("name", c.tvName).put("port", port)
         .put("controlsOtherApps", RemoteCommands.canControlOtherApps())
+        .apply {
+            com.hazagou.spectra.service.HomeOverrideService.instance?.let { svc ->
+                put("touch", !svc.isTv); put("gestures", svc.canGesture)
+            } ?: put("a11y", false)
+        }
 
     private fun pair(out: OutputStream, req: Request, c: RemoteConfig) {
         val now = SystemClock.elapsedRealtime()

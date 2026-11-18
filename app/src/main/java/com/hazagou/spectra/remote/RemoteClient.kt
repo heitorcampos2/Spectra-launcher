@@ -35,7 +35,8 @@ class RemoteClient(val tv: PairedTv) {
     private suspend fun post(path: String, body: JSONObject): CommandResult = withContext(Dispatchers.IO) {
         runCatching {
             val (code, resp) = request("POST", path, body.toString())
-            if (code == 200) CommandResult(true) else CommandResult(false, errorOf(resp, code))
+            if (code == 200) CommandResult(true, via = runCatching { JSONObject(resp).optString("via").ifBlank { null } }.getOrNull())
+            else CommandResult(false, errorOf(resp, code))
         }.getOrElse { CommandResult(false, "TV fora de alcance. Confira se estão na mesma rede Wi-Fi.") }
     }
 
