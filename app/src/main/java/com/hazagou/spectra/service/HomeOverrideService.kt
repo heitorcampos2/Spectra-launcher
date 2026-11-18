@@ -1,6 +1,11 @@
 package com.hazagou.spectra.service
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.app.UiModeManager
+import android.content.res.Configuration
+import android.graphics.Path
+import android.graphics.Rect
 import android.app.ActivityOptions
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -197,6 +202,83 @@ class HomeOverrideService : AccessibilityService() {
         val next = focus.focusSearch(dir) ?: return scrollFrom(focus, dir)
         return next.performAction(AccessibilityNodeInfo.ACTION_FOCUS) || next.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)
     }
+
+    // ------------------------------------------------ celular / tablet (tela de toque)
+
+    /** TV (Android TV / Google TV) navega por foco; celular e tablet navegam por toque e rolagem. */
+    val isTv: Boolean by lazy {
+        (getSystemService(UI_MODE_SERVICE) as? UiModeManager)?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
+            packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+    }
+
+    /**
+     * Setas e OK num aparelho de toque (tablet/celular). Lá os apps quase nunca mostram foco, então as
+     * setas do Android não fazem nada visível: aqui ↑ ↓ ← → rolam a tela (lista, página, carrossel)
+     * e OK toca no item selecionado ou no centro da tela.
+     */
+    fun remoteTouch(key: String): Boolean {
+        val root = rootInActiveWindow
+        if (key == "ok" || key == "oklong") {
+            val focus = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { !it.isEditable }
+                ?: root?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+            var n = focus
+            val action = if (key == "oklong") AccessibilityNodeInfo.ACTION_LONG_CLICK else AccessibilityNodeInfo.ACTION_CLICK
+            while (n != null) {
+                if ((key == "ok" && n.isClickable) || (key == "oklong" && n.isLongClickable)) { if (n.performAction(action)) return true; break }
+                n = n.parent
+            }
+            val r = screen()
+            return gesture(r.exactCenterX(), r.exactCenterY(), r.exactCenterX(), r.exactCenterY(), if (key == "oklong") 700L else 60L)
+        }
+        val vertical = key == "up" || key == "down"
+        val a = when (key) {
+            "up" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
+            "down" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
+            "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
+            "right" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
+            else -> return false
+        }
+        val forward = key == "down" || key == "right"
+        if (root != null) {
+            // 1) a maior área rolável que aceita essa direção
+            val all = ArrayList<AccessibilityNodeInfo>(); scrollables(root, all)
+            fun area(n: AccessibilityNodeInfo) = Rect().also { n.getBoundsInScreen(it) }.let { it.width().toLong() * it.height() }
+            val exact = all.filter { n -> n.actionList.any { it.id == a.id } }.maxByOrNull(::area)
+            if (exact != null && exact.performAction(a.id)) return true
+            // 2) listas antigas só conhecem "avançar/voltar": usa a maior delas no sentido certo
+            val generic = all.filter { n ->
+                val r = Rect().also { n.getBoundsInScreen(it) }
+                if (vertical) r.height() >= r.width() / 2 else r.width() > r.height()
+            }.maxByOrNull(::area)
+            if (generic != null && generic.performAction(
+                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
+        }
+        // 3) sem lista acessível (jogos, vídeos, WebView): arrasta o dedo na tela
+        val r = screen()
+        val cx = r.exactCenterX(); val cy = r.exactCenterY()
+        val dx = r.width() * 0.3f; val dy = r.height() * 0.25f
+        return when (key) {
+            "down" -> gesture(cx, cy + dy, cx, cy - dy)
+            "up" -> gesture(cx, cy - dy, cx, cy + dy)
+            "right" -> gesture(cx + dx, cy, cx - dx, cy)
+            else -> gesture(cx - dx, cy, cx + dx, cy)
+        }
+    }
+
+    private fun scrollables(n: AccessibilityNodeInfo, out: MutableList<AccessibilityNodeInfo>, depth: Int = 0) {
+        if (depth > 40) return
+        if (n.isScrollable && n.isVisibleToUser) out += n
+        for (i in 0 until n.childCount) scrollables(n.getChild(i) ?: continue, out, depth + 1)
+    }
+
+    private fun screen(): Rect =
+        if (Build.VERSION.SDK_INT >= 30) (getSystemService(WINDOW_SERVICE) as WindowManager).currentWindowMetrics.bounds
+        else resources.displayMetrics.let { Rect(0, 0, it.widthPixels, it.heightPixels) }
+
+    private fun gesture(x1: Float, y1: Float, x2: Float, y2: Float, ms: Long = 250L): Boolean = runCatching {
+        val path = Path().apply { moveTo(x1, y1); lineTo(x2, y2) }
+        dispatchGesture(GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, ms)).build(), null, null)
+    }.getOrDefault(false)
 
     /** Digita no campo de texto selecionado (ou no primeiro campo editável da tela). */
     fun remoteText(text: String): Boolean {

@@ -72,14 +72,20 @@ object RemoteCommands {
             if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true)
             if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true)
         }
-        // 2) outro app, Android 13+: ações nativas de seta/OK/voltar da acessibilidade (rápidas, sem depuração)
+        // 2) tablet/celular (tela de toque): setas rolam a tela e OK toca, pela acessibilidade.
+        //    Com a depuração conectada (adb tcpip 5555), as teclas de verdade vão primeiro.
+        if (svc != null && !svc.isTv && k != "back" && k != "menu") {
+            if (AdbRemote.isReady() && AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true)
+            if (svc.remoteTouch(k)) return CommandResult(true)
+        }
+        // 3) TV, Android 13+: ações nativas de seta/OK/voltar da acessibilidade (rápidas, sem depuração)
         if (svc != null && android.os.Build.VERSION.SDK_INT >= 33 && k != "menu" && k != "oklong") {
             val ok = if (k == "back") svc.remoteGlobal("back") else svc.remoteDpad(k)
             if (ok) return CommandResult(true)
         }
-        // 3) outro app pela depuração local da TV: funciona em qualquer app (Android TV 11 incluído)
+        // 4) outro app pela depuração local da TV: funciona em qualquer app (Android TV 11 incluído)
         if (AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true)
-        // 4) último recurso: acessibilidade movendo o foco pelos elementos da tela (só alguns apps aceitam)
+        // 5) último recurso: acessibilidade movendo o foco pelos elementos da tela (só alguns apps aceitam)
         if (svc == null && AdbRemote.state == AdbRemote.State.NO_DEBUG) return CommandResult(false, NEED_A11Y + " Ou ligue a Depuração USB na TV para controlar qualquer app.")
         val ok = svc != null && when (k) {
             "back" -> svc.remoteGlobal("back")

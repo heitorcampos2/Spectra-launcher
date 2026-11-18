@@ -20,12 +20,16 @@ data class RemoteConfig(
     val token: String get() = if (pin.isBlank()) "" else RemoteStore.sha256("spectra:$pin:$salt").take(32)
 }
 
-data class PairedTv(val name: String, val host: String, val port: Int, val token: String) {
+data class PairedTv(val name: String, val host: String, val port: Int, val token: String, val alias: String = "") {
     val id: String get() = "$host:$port"
+    /** Nome mostrado no celular: o apelido dado pelo usuário ou, sem apelido, o nome que a TV informou. */
+    val label: String get() = alias.ifBlank { name }
     fun toJson(): JSONObject = JSONObject().put("name", name).put("host", host).put("port", port).put("token", token)
+        .apply { if (alias.isNotBlank()) put("alias", alias) }
 
     companion object {
-        fun fromJson(o: JSONObject) = PairedTv(o.optString("name", "TV"), o.getString("host"), o.optInt("port", RemoteServer.DEFAULT_PORT), o.getString("token"))
+        fun fromJson(o: JSONObject) = PairedTv(o.optString("name", "TV"), o.getString("host"), o.optInt("port", RemoteServer.DEFAULT_PORT),
+            o.getString("token"), o.optString("alias", ""))
     }
 }
 
@@ -81,7 +85,19 @@ class RemoteStore(context: Context) {
         _paired.value = list
     }
 
-    fun addPaired(tv: PairedTv) = savePaired(listOf(tv) + _paired.value.filterNot { it.id == tv.id })
+    /** Pareia (ou pareia de novo) mantendo o apelido que o usuário já tinha dado a esse aparelho. */
+    fun addPaired(tv: PairedTv): PairedTv {
+        val old = _paired.value.firstOrNull { it.id == tv.id }
+        val merged = if (tv.alias.isBlank() && old != null) tv.copy(alias = old.alias) else tv
+        savePaired(listOf(merged) + _paired.value.filterNot { it.id == tv.id })
+        return merged
+    }
+    /** Apelido opcional; vazio volta ao nome original do aparelho. */
+    fun renamePaired(tv: PairedTv, alias: String): PairedTv {
+        val renamed = tv.copy(alias = alias.trim().take(40))
+        savePaired(_paired.value.map { if (it.id == tv.id) renamed else it })
+        return renamed
+    }
     fun removePaired(tv: PairedTv) = savePaired(_paired.value.filterNot { it.id == tv.id })
 
     companion object {

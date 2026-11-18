@@ -132,7 +132,7 @@ class RemoteActivity : ComponentActivity() {
 
         onScanned = { tv ->
             if (tv == null) message = "Este QR code não é de uma TV com Spectra."
-            else { store.addPaired(tv); selected = tv; showList = false; message = "Conectado a ${tv.name} ✔" }
+            else { val t = store.addPaired(tv); selected = t; showList = false; message = "Conectado a ${t.label} ✔" }
         }
         fun scan() = runCatching {
             scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -143,8 +143,8 @@ class RemoteActivity : ComponentActivity() {
         if (showList || sel == null) {
             current = null
             TvList(paired, onPick = { selected = it; showList = false }, onScan = { scan() },
-                onPaired = { tv -> store.addPaired(tv); selected = tv; showList = false },
-                onRemove = { store.removePaired(it) }, message = message, onMessage = { message = it })
+                onPaired = { tv -> selected = store.addPaired(tv); showList = false },
+                onRemove = { store.removePaired(it) }, onRename = { tv, n -> val r = store.renamePaired(tv, n); if (selected?.id == tv.id) selected = r }, message = message, onMessage = { message = it })
         } else {
             BackHandler { showList = true }
             Controller(sel, onBack = { showList = true }, message = message, onMessage = { message = it })
@@ -156,9 +156,10 @@ class RemoteActivity : ComponentActivity() {
     @Composable
     private fun TvList(
         paired: List<PairedTv>, onPick: (PairedTv) -> Unit, onScan: () -> Unit, onPaired: (PairedTv) -> Unit,
-        onRemove: (PairedTv) -> Unit, message: String?, onMessage: (String?) -> Unit,
+        onRemove: (PairedTv) -> Unit, onRename: (PairedTv, String) -> Unit, message: String?, onMessage: (String?) -> Unit,
     ) {
         var manual by remember { mutableStateOf(false) }
+        var renaming by remember { mutableStateOf<PairedTv?>(null) }
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -180,20 +181,44 @@ class RemoteActivity : ComponentActivity() {
             paired.forEach { tv ->
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Card)
-                        .combinedClickable(onClick = { onPick(tv) }).padding(16.dp),
+                        .combinedClickable(onClick = { onPick(tv) }, onLongClick = { renaming = tv }).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("📺", fontSize = 28.sp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(tv.name, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${tv.host}:${tv.port}", color = Muted, fontSize = 13.sp)
+                        Text(tv.label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (tv.alias.isNotBlank()) "${tv.name} · ${tv.host}" else "${tv.host}:${tv.port}", color = Muted, fontSize = 13.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    TextButton(onClick = { onRemove(tv) }) { Text("Remover", color = Muted) }
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = { renaming = tv }) { Text("Renomear", color = Muted) }
+                        TextButton(onClick = { onRemove(tv) }) { Text("Remover", color = Muted) }
+                    }
                 }
             }
         }
         if (manual) ManualPairDialog(onDismiss = { manual = false }, onPaired = { manual = false; onPaired(it) })
+        renaming?.let { tv -> RenameDialog(tv, onDismiss = { renaming = null }, onSave = { onRename(tv, it); renaming = null }) }
+    }
+
+    @Composable
+    private fun RenameDialog(tv: PairedTv, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+        var name by remember { mutableStateOf(tv.alias) }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Renomear aparelho") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Opcional. Deixe em branco para voltar ao nome original: ${tv.name}.", color = Muted, fontSize = 13.sp)
+                    OutlinedTextField(name, { name = it.take(40) }, label = { Text("Nome (ex.: TV da sala, Tablet)") }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onSave(name) }))
+                }
+            },
+            confirmButton = { Button(onClick = { onSave(name) }) { Text("Salvar") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        )
     }
 
     @Composable
@@ -261,7 +286,7 @@ class RemoteActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onBack) { Text("‹ TVs", color = Color.White, fontSize = 16.sp) }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(tv.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tv.label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         when (online) { true -> "● Conectado"; false -> "● Fora de alcance"; null -> "Conectando…" },
                         color = when (online) { true -> Color(0xFF4ADE80); false -> Color(0xFFFCA5A5); null -> Muted }, fontSize = 12.sp
