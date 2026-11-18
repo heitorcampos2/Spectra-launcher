@@ -5,13 +5,22 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -19,15 +28,16 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,15 +48,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,9 +67,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -73,26 +87,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
+import com.hazagou.spectra.BuildConfig
 import com.hazagou.spectra.SpectraApp
+import com.hazagou.spectra.update.SintoniaState
+import com.hazagou.spectra.update.SintoniaSuggestion
+import com.hazagou.spectra.update.UpdateState
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-private val Purple = Color(0xFF8B5CF6)
-private val Night = Color(0xFF120F33)
-private val Card = Color(0xFF1E1A4E)
-private val CardHigh = Color(0xFF2A2466)
+private val Night = Color(0xFF0E0C24)
+private val Card = Color(0xFF1C1940)
+private val CardHigh = Color(0xFF2A2660)
+private val Line = Color(0x14FFFFFF)
 private val Muted = Color(0xFFA9A3D9)
+private val Good = Color(0xFF4ADE80)
+private val Bad = Color(0xFFFCA5A5)
+
+/** Aparência escolhida em Ajustes do controle. */
+private data class Look(val accent: RemoteAccent, val icons: RemoteIconStyle, val haptic: Boolean)
+private val LocalLook = staticCompositionLocalOf { Look(REMOTE_ACCENTS[0], RemoteIconStyle.LINHAS, true) }
+
+private enum class Page { LIST, CONTROL, SETTINGS }
 
 /**
- * "Spectra Controle": transforma o celular em controle remoto da TV com o Spectra.
+ * "Spectra Controle": transforma o celular em controle remoto da TV (ou do tablet) com o Spectra.
  * Pareamento pelo QR code mostrado na TV (MENU ☰ › Controle remoto) ou por IP + PIN.
  */
 class RemoteActivity : ComponentActivity() {
 
-    private val store by lazy { (application as SpectraApp).remote }
+    private val app by lazy { application as SpectraApp }
+    private val store by lazy { app.remote }
+    private val look by lazy { RemoteLookStore(this) }
+    private val smartTube by lazy { SintoniaSuggestion.smartTube(applicationContext) }
     private var current: RemoteClient? = null
     private var onScanned: ((PairedTv?) -> Unit)? = null
 
@@ -103,10 +132,17 @@ class RemoteActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        app.updates.checkIfDue()
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(primary = Purple, secondary = Purple, background = Night, surface = Card)) {
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF2A1F6B), Night, Night)))) {
-                    RemoteApp()
+            val accentIdx by look.accent.collectAsState()
+            val icons by look.icons.collectAsState()
+            val haptic by look.haptic.collectAsState()
+            val accent = REMOTE_ACCENTS[accentIdx]
+            CompositionLocalProvider(LocalLook provides Look(accent, icons, haptic)) {
+                MaterialTheme(colorScheme = darkColorScheme(primary = accent.color, secondary = accent.color, background = Night, surface = Card)) {
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.glow, Night, Night)))) {
+                        RemoteApp()
+                    }
                 }
             }
         }
@@ -123,79 +159,147 @@ class RemoteActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    // ================================================================ navegação
+
     @Composable
     private fun RemoteApp() {
         val paired by store.paired.collectAsState()
         var selected by remember { mutableStateOf(paired.firstOrNull()) }
-        var showList by remember { mutableStateOf(paired.isEmpty()) }
+        var page by remember { mutableStateOf(if (paired.isEmpty()) Page.LIST else Page.CONTROL) }
+        var back by remember { mutableStateOf(Page.LIST) }
         var message by remember { mutableStateOf<String?>(null) }
 
         onScanned = { tv ->
             if (tv == null) message = "Este QR code não é de uma TV com Spectra."
-            else { val t = store.addPaired(tv); selected = t; showList = false; message = "Conectado a ${t.label} ✔" }
+            else { val t = store.addPaired(tv); selected = t; page = Page.CONTROL; message = "Conectado a ${t.label} ✔" }
         }
         fun scan() = runCatching {
             scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                 .setPrompt("Aponte para o QR code na TV").setBeepEnabled(false).setOrientationLocked(false))
         }.onFailure { message = "Câmera indisponível" }
+        fun openSettings(from: Page) { back = from; page = Page.SETTINGS }
 
         val sel = selected
-        if (showList || sel == null) {
-            current = null
-            TvList(paired, onPick = { selected = it; showList = false }, onScan = { scan() },
-                onPaired = { tv -> selected = store.addPaired(tv); showList = false },
-                onRemove = { store.removePaired(it) }, onRename = { tv, n -> val r = store.renamePaired(tv, n); if (selected?.id == tv.id) selected = r }, message = message, onMessage = { message = it })
-        } else {
-            BackHandler { showList = true }
-            Controller(sel, onBack = { showList = true }, message = message, onMessage = { message = it })
+        val shown = if (page == Page.CONTROL && sel == null) Page.LIST else page
+        if (shown != Page.CONTROL) current = null
+        if (shown != Page.LIST) BackHandler { page = if (shown == Page.SETTINGS && back == Page.CONTROL && sel != null) Page.CONTROL else Page.LIST }
+
+        AnimatedContent(shown, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "page") { p ->
+            when (p) {
+                Page.LIST -> TvList(paired, onPick = { selected = it; page = Page.CONTROL }, onScan = { scan() },
+                    onPaired = { tv -> selected = store.addPaired(tv); page = Page.CONTROL },
+                    onRemove = { store.removePaired(it); if (selected?.id == it.id) selected = null },
+                    onRename = { tv, n -> val r = store.renamePaired(tv, n); if (selected?.id == tv.id) selected = r },
+                    onSettings = { openSettings(Page.LIST) }, message = message, onMessage = { message = it })
+                Page.CONTROL -> sel?.let { Controller(it, onBack = { page = Page.LIST }, onSettings = { openSettings(Page.CONTROL) }, message = message, onMessage = { message = it }) }
+                Page.SETTINGS -> SettingsPage(onBack = { page = if (back == Page.CONTROL && sel != null) Page.CONTROL else Page.LIST })
+            }
         }
     }
 
-    // ================================================================ lista de TVs
+    // ================================================================ peças comuns
+
+    @Composable
+    private fun TopBar(title: String, subtitle: @Composable (() -> Unit)? = null, onBack: (() -> Unit)?, onSettings: (() -> Unit)?) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(56.dp)) { if (onBack != null) RoundIcon("back", onBack) }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                subtitle?.invoke()
+            }
+            Box(Modifier.width(56.dp), contentAlignment = Alignment.CenterEnd) { if (onSettings != null) RoundIcon("settings", onSettings) }
+        }
+    }
+
+    @Composable
+    private fun RoundIcon(key: String, onClick: () -> Unit) {
+        Box(Modifier.size(44.dp).clip(CircleShape).background(Card).border(1.dp, Line, CircleShape).combinedClickable(onClick = onClick),
+            contentAlignment = Alignment.Center) { RemoteIcon(key, LocalLook.current.icons, size = 20.dp) }
+    }
+
+    @Composable
+    private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title.uppercase(), color = LocalLook.current.accent.color, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            content()
+        }
+    }
+
+    @Composable
+    private fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+        Column(modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Card).border(1.dp, Line, RoundedCornerShape(22.dp)).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    }
+
+    @Composable
+    private fun AccentButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+        Button(onClick = onClick, enabled = enabled, modifier = modifier.height(48.dp), shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = LocalLook.current.accent.color)) { Text(text, fontWeight = FontWeight.SemiBold) }
+    }
+
+    @Composable
+    private fun GhostButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+        OutlinedButton(onClick = onClick, modifier = modifier.height(48.dp), shape = RoundedCornerShape(16.dp)) { Text(text, color = Color.White) }
+    }
+
+    // ================================================================ lista de aparelhos
 
     @Composable
     private fun TvList(
         paired: List<PairedTv>, onPick: (PairedTv) -> Unit, onScan: () -> Unit, onPaired: (PairedTv) -> Unit,
-        onRemove: (PairedTv) -> Unit, onRename: (PairedTv, String) -> Unit, message: String?, onMessage: (String?) -> Unit,
+        onRemove: (PairedTv) -> Unit, onRename: (PairedTv, String) -> Unit, onSettings: () -> Unit,
+        message: String?, onMessage: (String?) -> Unit,
     ) {
         var manual by remember { mutableStateOf(false) }
         var renaming by remember { mutableStateOf<PairedTv?>(null) }
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text("📱 Spectra Controle", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("Use o celular como controle remoto da TV. Os dois precisam estar na mesma rede Wi-Fi.", color = Muted)
-            Button(onClick = onScan, modifier = Modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(18.dp)) {
-                Text("⌗  Escanear QR code da TV", fontSize = 17.sp)
-            }
-            OutlinedButton(onClick = { manual = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp)) {
-                Text("Conectar com IP e PIN", color = Color.White)
-            }
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Card).padding(16.dp)) {
-                Text("Na TV: aperte MENU ☰ › Controle remoto › Parear celular. Defina um PIN e o QR code aparece na tela.",
-                    color = Muted, fontSize = 14.sp)
-            }
-            Message(message, onMessage)
-            if (paired.isNotEmpty()) Text("TVs pareadas", color = Purple, fontWeight = FontWeight.Bold)
-            paired.forEach { tv ->
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Card)
-                        .combinedClickable(onClick = { onPick(tv) }, onLongClick = { renaming = tv }).padding(16.dp),
+        val upd by app.updates.state.collectAsState()
+        val accent = LocalLook.current.accent.color
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            TopBar("Spectra Controle", onBack = null, onSettings = onSettings)
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("Use o celular como controle remoto da TV ou do tablet. Os dois precisam estar na mesma rede Wi-Fi.", color = Muted, fontSize = 14.sp)
+                if (upd is UpdateState.Available) Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(accent.copy(alpha = 0.18f))
+                        .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).combinedClickable(onClick = onSettings).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("📺", fontSize = 28.sp)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(tv.label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (tv.alias.isNotBlank()) "${tv.name} · ${tv.host}" else "${tv.host}:${tv.port}", color = Muted, fontSize = 13.sp,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        TextButton(onClick = { renaming = tv }) { Text("Renomear", color = Muted) }
-                        TextButton(onClick = { onRemove(tv) }) { Text("Remover", color = Muted) }
+                    Text("⬆", color = Color.White, fontSize = 18.sp); Spacer(Modifier.width(10.dp))
+                    Text("Nova versão do controle: ${(upd as UpdateState.Available).release.version}. Toque para atualizar.", color = Color.White, fontSize = 14.sp)
+                }
+                AccentButton("⌗  Escanear QR code da TV", Modifier.fillMaxWidth().height(56.dp), onClick = onScan)
+                GhostButton("Conectar com IP e PIN", Modifier.fillMaxWidth()) { manual = true }
+                Panel {
+                    Text("Na TV ou no tablet: abra o Spectra › MENU ☰ › Controle remoto › Parear celular. Defina um PIN e o QR code aparece na tela.",
+                        color = Muted, fontSize = 13.sp)
+                }
+                Message(message, onMessage)
+                if (paired.isNotEmpty()) Section("Aparelhos pareados") {
+                    paired.forEach { tv ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Card).border(1.dp, Line, RoundedCornerShape(20.dp))
+                                .combinedClickable(onClick = { onPick(tv) }, onLongClick = { renaming = tv }).padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                                Text(if (tv.name.contains("TV", true)) "📺" else "📱", fontSize = 22.sp)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(tv.label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(if (tv.alias.isNotBlank()) "${tv.name} · ${tv.host}" else "${tv.host}:${tv.port}", color = Muted, fontSize = 12.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                TextButton(onClick = { renaming = tv }) { Text("Renomear", color = Muted, fontSize = 13.sp) }
+                                TextButton(onClick = { onRemove(tv) }) { Text("Remover", color = Muted, fontSize = 13.sp) }
+                            }
+                        }
                     }
                 }
+                Spacer(Modifier.height(20.dp))
             }
         }
         if (manual) ManualPairDialog(onDismiss = { manual = false }, onPaired = { manual = false; onPaired(it) })
@@ -238,7 +342,7 @@ class RemoteActivity : ComponentActivity() {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
                     OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(8) }, label = { Text("PIN") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    if (error != null) Text(error!!, color = Color(0xFFFCA5A5), fontSize = 13.sp)
+                    if (error != null) Text(error!!, color = Bad, fontSize = 13.sp)
                 }
             },
             confirmButton = {
@@ -259,11 +363,12 @@ class RemoteActivity : ComponentActivity() {
     // ================================================================ controle
 
     @Composable
-    private fun Controller(tv: PairedTv, onBack: () -> Unit, message: String?, onMessage: (String?) -> Unit) {
+    private fun Controller(tv: PairedTv, onBack: () -> Unit, onSettings: () -> Unit, message: String?, onMessage: (String?) -> Unit) {
         val client = remember(tv) { RemoteClient(tv) }
         DisposableEffect(client) { current = client; onDispose { if (current === client) current = null } }
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
+        val lk = LocalLook.current
         var online by remember { mutableStateOf<Boolean?>(null) }
         var otherApps by remember { mutableStateOf(true) }
         var tab by remember { mutableStateOf(0) }
@@ -287,44 +392,36 @@ class RemoteActivity : ComponentActivity() {
         }
 
         fun send(k: String) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            if (lk.haptic) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             scope.launch { val r = client.key(k); if (!r.ok) onMessage(r.message) else if (r.via != null) lastVia = r.via }
         }
 
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack) { Text("‹ TVs", color = Color.White, fontSize = 16.sp) }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(tv.label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        when (online) { true -> "● Conectado"; false -> "● Fora de alcance"; null -> "Conectando…" },
-                        color = when (online) { true -> Color(0xFF4ADE80); false -> Color(0xFFFCA5A5); null -> Muted }, fontSize = 12.sp
-                    )
-                    if (online == true && tvInfo.isNotBlank())
-                        Text(tvInfo + (lastVia?.let { " · $it" } ?: ""), color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Spacer(Modifier.width(64.dp))
-            }
-            TabRow(selectedTabIndex = tab, containerColor = Color.Transparent, contentColor = Color.White) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("Controle") })
-                Tab(tab == 1, { tab = 1 }, text = { Text("Apps") })
-            }
+            TopBar(tv.label, subtitle = {
+                Text(
+                    when (online) { true -> "● Conectado"; false -> "● Fora de alcance"; null -> "Conectando…" },
+                    color = when (online) { true -> Good; false -> Bad; null -> Muted }, fontSize = 12.sp
+                )
+                if (online == true && tvInfo.isNotBlank())
+                    Text(tvInfo + (lastVia?.let { " · $it" } ?: ""), color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }, onBack = onBack, onSettings = onSettings)
+            Segmented(listOf("Controle", "Apps"), tab) { tab = it }
             Message(message, onMessage)
             if (tab == 0) {
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     if (!otherApps) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x33F59E0B)).padding(12.dp)) {
-                        Text("Na TV, ative \"Spectra — Botão Home e controle\" em Acessibilidade para controlar também outros apps (YouTube, Netflix…).",
+                        Text("No aparelho, ative \"Spectra — Botão Home e controle\" em Acessibilidade para controlar também outros apps (YouTube, Netflix…).",
                             color = Color(0xFFFDE68A), fontSize = 13.sp)
                     }
+                    KeyRow { Key("back", "Voltar", ::send); Key("home", "Início", ::send); Key("menu", "Menu", ::send) }
                     DPad(::send)
                     Text("Deslize no círculo para navegar • segure OK para opções", color = Muted, fontSize = 12.sp)
-                    KeyRow { Key("↩", "Voltar", Modifier.weight(1f)) { send("back") }; Key("⌂", "Início", Modifier.weight(1f)) { send("home") }; Key("☰", "Menu", Modifier.weight(1f)) { send("menu") } }
-                    KeyRow { Key("⏪", null, Modifier.weight(1f)) { send("rew") }; Key("⏯", null, Modifier.weight(1f)) { send("play") }; Key("⏩", null, Modifier.weight(1f)) { send("ff") } }
-                    KeyRow { Key("🔉", null, Modifier.weight(1f)) { send("voldown") }; Key("🔇", null, Modifier.weight(1f)) { send("mute") }; Key("🔊", null, Modifier.weight(1f)) { send("volup") } }
-                    KeyRow { Key("⏮", null, Modifier.weight(1f)) { send("prev") }; Key("⚙", "Ajustes", Modifier.weight(1f)) { send("settings") }; Key("⏭", null, Modifier.weight(1f)) { send("next") } }
+                    KeyRow { Key("voldown", "Vol −", ::send); Key("mute", "Mudo", ::send); Key("volup", "Vol +", ::send) }
+                    KeyRow { Key("rew", null, ::send); Key("play", null, ::send, highlight = true); Key("ff", null, ::send) }
+                    KeyRow { Key("prev", null, ::send); Key("settings", "Ajustes", ::send); Key("next", null, ::send) }
                     TextSender(client, onMessage)
                     Spacer(Modifier.height(24.dp))
                 }
@@ -333,11 +430,27 @@ class RemoteActivity : ComponentActivity() {
     }
 
     @Composable
+    private fun Segmented(items: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+        val accent = LocalLook.current.accent.color
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(Card).padding(4.dp)) {
+            items.forEachIndexed { i, label ->
+                Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (i == selected) accent else Color.Transparent).combinedClickable(onClick = { onSelect(i) }),
+                    contentAlignment = Alignment.Center) {
+                    Text(label, color = if (i == selected) Color.White else Muted, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun DPad(send: (String) -> Unit) {
+        val lk = LocalLook.current
         var drag by remember { mutableStateOf(Offset.Zero) }
         Box(
-            Modifier.size(270.dp).clip(CircleShape).background(Brush.radialGradient(listOf(CardHigh, Card)))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
+            Modifier.size(280.dp).clip(CircleShape)
+                .background(Brush.radialGradient(listOf(CardHigh, Card, lk.accent.glow)))
+                .border(2.dp, Brush.sweepGradient(listOf(lk.accent.color.copy(alpha = 0.6f), Color.White.copy(alpha = 0.06f), lk.accent.color.copy(alpha = 0.6f))), CircleShape)
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { drag = Offset.Zero },
@@ -349,23 +462,32 @@ class RemoteActivity : ComponentActivity() {
                     ) { change, amount -> change.consume(); drag += amount }
                 }
         ) {
-            PadKey("▲", Modifier.align(Alignment.TopCenter)) { send("up") }
-            PadKey("▼", Modifier.align(Alignment.BottomCenter)) { send("down") }
-            PadKey("◀", Modifier.align(Alignment.CenterStart)) { send("left") }
-            PadKey("▶", Modifier.align(Alignment.CenterEnd)) { send("right") }
+            PadKey("up", Alignment.TopCenter, send)
+            PadKey("down", Alignment.BottomCenter, send)
+            PadKey("left", Alignment.CenterStart, send)
+            PadKey("right", Alignment.CenterEnd, send)
+            val src = remember { MutableInteractionSource() }
+            val pressed by src.collectIsPressedAsState()
+            val sc by animateFloatAsState(if (pressed) 0.92f else 1f, label = "ok")
             Box(
-                Modifier.align(Alignment.Center).size(112.dp).clip(CircleShape).background(Purple)
-                    .combinedClickable(onLongClick = { send("oklong") }, onClick = { send("ok") }),
+                Modifier.align(Alignment.Center).size(116.dp).scale(sc).clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(lk.accent.color, lk.accent.color.copy(alpha = 0.75f))))
+                    .border(3.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                    .combinedClickable(interactionSource = src, indication = null, onLongClick = { send("oklong") }, onClick = { send("ok") }),
                 contentAlignment = Alignment.Center
-            ) { Text("OK", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("OK", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
         }
     }
 
     @Composable
-    private fun PadKey(icon: String, modifier: Modifier, onClick: () -> Unit) {
-        Box(modifier.size(78.dp).clip(CircleShape).combinedClickable(onClick = onClick), contentAlignment = Alignment.Center) {
-            Text(icon, color = Color.White, fontSize = 26.sp)
-        }
+    private fun BoxScope.PadKey(key: String, align: Alignment, send: (String) -> Unit) {
+        val src = remember { MutableInteractionSource() }
+        val pressed by src.collectIsPressedAsState()
+        val sc by animateFloatAsState(if (pressed) 0.85f else 1f, label = key)
+        Box(Modifier.align(align).size(82.dp).scale(sc).clip(CircleShape)
+            .background(if (pressed) Color.White.copy(alpha = 0.10f) else Color.Transparent)
+            .combinedClickable(interactionSource = src, indication = null, onClick = { send(key) }),
+            contentAlignment = Alignment.Center) { RemoteIcon(key, LocalLook.current.icons, size = 30.dp) }
     }
 
     @Composable
@@ -373,13 +495,20 @@ class RemoteActivity : ComponentActivity() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), content = content)
 
     @Composable
-    private fun Key(icon: String, label: String?, modifier: Modifier, onClick: () -> Unit) {
+    private fun RowScope.Key(key: String, label: String?, send: (String) -> Unit, highlight: Boolean = false) {
+        val lk = LocalLook.current
+        val src = remember { MutableInteractionSource() }
+        val pressed by src.collectIsPressedAsState()
+        val sc by animateFloatAsState(if (pressed) 0.93f else 1f, label = key)
         Column(
-            modifier.height(64.dp).clip(RoundedCornerShape(18.dp)).background(Card).combinedClickable(onClick = onClick),
+            Modifier.weight(1f).height(66.dp).scale(sc).clip(RoundedCornerShape(20.dp))
+                .background(if (highlight) lk.accent.color.copy(alpha = 0.28f) else if (pressed) CardHigh else Card)
+                .border(1.dp, if (highlight) lk.accent.color.copy(alpha = 0.5f) else Line, RoundedCornerShape(20.dp))
+                .combinedClickable(interactionSource = src, indication = null, onClick = { send(key) }),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
         ) {
-            Text(icon, color = Color.White, fontSize = 22.sp)
-            if (label != null) Text(label, color = Muted, fontSize = 11.sp)
+            RemoteIcon(key, lk.icons, size = 24.dp)
+            if (label != null) { Spacer(Modifier.height(3.dp)); Text(label, color = Muted, fontSize = 11.sp) }
         }
     }
 
@@ -394,9 +523,11 @@ class RemoteActivity : ComponentActivity() {
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(text, { text = it }, Modifier.weight(1f), placeholder = { Text("Digitar na TV (busca, senha…)") }, singleLine = true,
+                shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { go() }))
             Spacer(Modifier.width(8.dp))
-            Button(onClick = { go() }, colors = ButtonDefaults.buttonColors(containerColor = Purple), shape = RoundedCornerShape(14.dp)) { Text("Enviar") }
+            Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(LocalLook.current.accent.color).combinedClickable(onClick = { go() }),
+                contentAlignment = Alignment.Center) { RemoteIcon("send", LocalLook.current.icons, size = 22.dp) }
         }
     }
 
@@ -412,19 +543,167 @@ class RemoteActivity : ComponentActivity() {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return
         }
-        LazyVerticalGrid(GridCells.Adaptive(92.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(list, key = { it.pkg }) { app ->
                 Column(
-                    Modifier.clip(RoundedCornerShape(18.dp)).background(Card)
+                    Modifier.clip(RoundedCornerShape(20.dp)).background(Card).border(1.dp, Line, RoundedCornerShape(20.dp))
                         .combinedClickable(onClick = { scope.launch { val r = client.launch(app.pkg); onMessage(if (r.ok) "Abrindo ${app.label}…" else r.message) } })
                         .padding(10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AsyncImage(client.iconUrl(app.pkg), app.label, Modifier.size(52.dp).aspectRatio(1f))
+                    AsyncImage(client.iconUrl(app.pkg), app.label, Modifier.size(54.dp).aspectRatio(1f).clip(RoundedCornerShape(14.dp)))
                     Spacer(Modifier.height(6.dp))
                     Text(app.label, color = Color.White, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                 }
+            }
+        }
+    }
+
+    // ================================================================ ajustes do controle
+
+    @Composable
+    private fun SettingsPage(onBack: () -> Unit) {
+        val lk = LocalLook.current
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            TopBar("Ajustes do controle", onBack = onBack, onSettings = null)
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp)
+            ) {
+                Section("Cor do controle") {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        REMOTE_ACCENTS.forEachIndexed { i, a ->
+                            val sel = a == lk.accent
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(62.dp)) {
+                                Box(Modifier.size(48.dp).clip(CircleShape).background(Brush.radialGradient(listOf(a.color, a.glow)))
+                                    .border(if (sel) 3.dp else 1.dp, if (sel) Color.White else Line, CircleShape)
+                                    .combinedClickable(onClick = { look.setAccent(i) }), contentAlignment = Alignment.Center) {
+                                    if (sel) Text("✓", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(a.name, color = if (sel) Color.White else Muted, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+                Section("Ícones dos botões") {
+                    RemoteIconStyle.values().forEach { st ->
+                        val sel = st == lk.icons
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                                .background(if (sel) lk.accent.color.copy(alpha = 0.18f) else Card)
+                                .border(1.dp, if (sel) lk.accent.color else Line, RoundedCornerShape(18.dp))
+                                .combinedClickable(onClick = { look.setIcons(st) }).padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(st.label, color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text(st.sample, color = Muted, fontSize = 12.sp)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                listOf("home", "back", "play", "volup").forEach { RemoteIcon(it, st, size = 22.dp) }
+                            }
+                        }
+                    }
+                }
+                Section("Toque") {
+                    Panel {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Vibrar ao apertar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text("Uma vibração curta a cada botão", color = Muted, fontSize = 12.sp)
+                            }
+                            Switch(lk.haptic, { look.setHaptic(it) }, colors = SwitchDefaults.colors(checkedTrackColor = lk.accent.color))
+                        }
+                    }
+                }
+                Section("Atualizações") { UpdatesPanel() }
+                Section("Apps sugeridos") {
+                    SuggestionPanel(app.sintonia, "📡", "TV ao vivo, filmes e séries da sua lista IPTV, com guia e favoritos.")
+                    SuggestionPanel(smartTube, "▶️", "YouTube sem anúncios, feito para TV e controle remoto.")
+                }
+                Text("Spectra Controle ${BuildConfig.VERSION_NAME} · por Heitor Campos", color = Muted, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(20.dp))
+            }
+        }
+    }
+
+    @Composable
+    private fun UpdatesPanel() {
+        val st by app.updates.state.collectAsState()
+        LaunchedEffect(Unit) { if (app.updates.state.value is UpdateState.Idle) app.updates.check() }
+        val lk = LocalLook.current
+        Panel {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(lk.accent.color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Text("📱", fontSize = 22.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Spectra Controle", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Versão neste celular: ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 12.sp)
+                }
+            }
+            when (val s = st) {
+                UpdateState.Idle, UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp))
+                    Text("Procurando atualização…", color = Muted, fontSize = 13.sp)
+                }
+                is UpdateState.UpToDate -> Text("✔ Você está na versão mais nova.", color = Good, fontSize = 13.sp)
+                is UpdateState.Available -> {
+                    Text("Nova versão ${s.release.version} disponível.", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    if (s.release.notes.isNotBlank()) Text(s.release.notes.take(400), color = Muted, fontSize = 12.sp)
+                    AccentButton("Baixar e instalar", Modifier.fillMaxWidth()) { app.updates.downloadAndInstall(s.release) }
+                }
+                is UpdateState.Downloading -> {
+                    Text("Baixando ${s.release.version}… ${(s.progress * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+                    LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth(), color = lk.accent.color)
+                }
+                is UpdateState.Installing -> Text("Abrindo o instalador… confirme na tela.", color = Color.White, fontSize = 13.sp)
+                is UpdateState.Failed -> {
+                    Text(s.message, color = Bad, fontSize = 13.sp)
+                    s.release?.let { r -> AccentButton("Tentar de novo", Modifier.fillMaxWidth()) { app.updates.downloadAndInstall(r) } }
+                }
+            }
+            if (st !is UpdateState.Checking && st !is UpdateState.Downloading && st !is UpdateState.Installing)
+                GhostButton("Verificar agora", Modifier.fillMaxWidth()) { app.updates.check() }
+        }
+    }
+
+    @Composable
+    private fun SuggestionPanel(sug: SintoniaSuggestion, emoji: String, description: String) {
+        val st by sug.state.collectAsState()
+        val installed = remember(st) { sug.installedVersion() }
+        val lk = LocalLook.current
+        Panel {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(lk.accent.color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Text(emoji, fontSize = 22.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sug.name, color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(description, color = Muted, fontSize = 12.sp)
+                }
+            }
+            when (val s = st) {
+                SintoniaState.Checking -> Text("Procurando a versão mais nova…", color = Muted, fontSize = 13.sp)
+                is SintoniaState.Downloading -> {
+                    Text("Baixando… ${(s.progress * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+                    LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth(), color = lk.accent.color)
+                }
+                is SintoniaState.Installing -> Text("Abrindo o instalador… confirme na tela.", color = Color.White, fontSize = 13.sp)
+                is SintoniaState.Done -> Text("✔ ${sug.name} instalado.", color = Good, fontSize = 13.sp)
+                is SintoniaState.Failed -> Text(s.message, color = Bad, fontSize = 13.sp)
+                SintoniaState.Idle -> if (installed != null) Text("Instalado (versão $installed).", color = Muted, fontSize = 12.sp)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (installed != null) {
+                    AccentButton("Abrir", Modifier.weight(1f)) { sug.open() }
+                    GhostButton("Atualizar", Modifier.weight(1f)) { sug.installLatest(app.updates) }
+                } else AccentButton("Instalar", Modifier.fillMaxWidth()) { sug.installLatest(app.updates) }
             }
         }
     }
@@ -435,7 +714,7 @@ class RemoteActivity : ComponentActivity() {
         if (message != null) Text(
             message, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(12.dp)).background(Color(0x55000000)).padding(10.dp)
+                .clip(RoundedCornerShape(12.dp)).background(Color(0x66000000)).padding(10.dp)
         )
     }
 }

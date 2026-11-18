@@ -70,10 +70,12 @@ object RemoteCommands {
             return startActivity(ctx, Intent(android.provider.Settings.ACTION_SETTINGS))
         }
 
-        // 1) Spectra na tela → injeta a tecla na janela em foco do launcher (inclui diálogos abertos)
-        MainActivity.foreground?.get()?.let { act ->
-            if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true)
-            if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true)
+        // 1) Spectra realmente na tela → injeta a tecla na janela em foco do launcher (inclui diálogos abertos).
+        //    Confere pela acessibilidade qual app está na frente: em tablets o Android às vezes não avisa que o
+        //    Spectra saiu da tela, e a tecla ia para a janela escondida (nada acontecia).
+        MainActivity.foreground?.get()?.takeIf { spectraOnTop(ctx, it, svc) }?.let { act ->
+            if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true, via = "Spectra")
+            if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true, via = "Spectra")
         }
         // 2) tablet/celular (tela de toque): setas rolam a tela e OK toca, pela acessibilidade.
         //    Com a depuração conectada (adb tcpip 5555), as teclas de verdade vão primeiro.
@@ -84,10 +86,10 @@ object RemoteCommands {
         // 3) TV, Android 13+: ações nativas de seta/OK/voltar da acessibilidade (rápidas, sem depuração)
         if (svc != null && android.os.Build.VERSION.SDK_INT >= 33 && k != "menu" && k != "oklong") {
             val ok = if (k == "back") svc.remoteGlobal("back") else svc.remoteDpad(k)
-            if (ok) return CommandResult(true)
+            if (ok) return CommandResult(true, via = if (k == "back") "voltar" else "tecla de seta")
         }
         // 4) outro app pela depuração local da TV: funciona em qualquer app (Android TV 11 incluído)
-        if (AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true)
+        if (AdbRemote.key(ctx, code, long = k == "oklong")) return CommandResult(true, via = "tecla (depuração)")
         // 5) último recurso: acessibilidade movendo o foco pelos elementos da tela (só alguns apps aceitam)
         if (svc == null && AdbRemote.state == AdbRemote.State.NO_DEBUG) return CommandResult(false, NEED_A11Y + " Ou ligue a Depuração USB na TV para controlar qualquer app.")
         val ok = svc != null && when (k) {
@@ -95,7 +97,7 @@ object RemoteCommands {
             "menu" -> svc.remoteGlobal("menu")
             else -> svc.remoteDpad(k)
         }
-        return if (ok) CommandResult(true) else CommandResult(false, AdbRemote.hint())
+        return if (ok) CommandResult(true, via = "foco") else CommandResult(false, AdbRemote.hint())
     }
 
     fun text(ctx: Context, text: String): CommandResult {
@@ -136,6 +138,13 @@ object RemoteCommands {
         audio.dispatchMediaKeyEvent(KeyEvent(t, t + 30, KeyEvent.ACTION_UP, code, 0))
         CommandResult(true)
     }.getOrElse { CommandResult(false, "Mídia indisponível") }
+
+    /** O Spectra está mesmo na frente? (janela com foco e, com a acessibilidade ligada, o app ativo é o Spectra) */
+    private fun spectraOnTop(ctx: Context, act: MainActivity, svc: HomeOverrideService?): Boolean {
+        if (act.isFinishing || act.isDestroyed || !act.hasWindowFocus()) return false
+        val top = svc?.activePackage() ?: return true
+        return top == ctx.packageName
+    }
 
     private val instrumentation by lazy { android.app.Instrumentation() }
 

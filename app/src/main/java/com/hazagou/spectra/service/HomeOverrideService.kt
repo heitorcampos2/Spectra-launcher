@@ -299,6 +299,9 @@ class HomeOverrideService : AccessibilityService() {
         return if (ok) "arrastou na tela" else null
     }
 
+    /** Pacote do app que está na frente agora (null se não der para saber). */
+    fun activePackage(): String? = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+
     /** O Android só deixa arrastar/tocar na tela depois de religar o serviço com a permissão nova. */
     val canGesture: Boolean get() = runCatching {
         (serviceInfo.capabilities and android.accessibilityservice.AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0

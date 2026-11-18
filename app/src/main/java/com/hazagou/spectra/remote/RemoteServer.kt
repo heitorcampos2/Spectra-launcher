@@ -160,6 +160,7 @@ object RemoteServer {
         .apply {
             com.hazagou.spectra.service.HomeOverrideService.instance?.let { svc ->
                 put("touch", !svc.isTv); put("gestures", svc.canGesture)
+                svc.activePackage()?.let { put("top", it) }
             } ?: put("a11y", false)
         }
 
