@@ -73,7 +73,8 @@ object RemoteCommands {
         // 1) Spectra realmente na tela → injeta a tecla na janela em foco do launcher (inclui diálogos abertos).
         //    Confere pela acessibilidade qual app está na frente: em tablets o Android às vezes não avisa que o
         //    Spectra saiu da tela, e a tecla ia para a janela escondida (nada acontecia).
-        MainActivity.foreground?.get()?.takeIf { spectraOnTop(ctx, it, svc) }?.let { act ->
+        // (só na TV: em tablet/celular a tela é de toque e as teclas não mexem em nada; lá vale o passo 2 também no Spectra)
+        MainActivity.foreground?.get()?.takeIf { (svc == null || svc.isTv) && spectraOnTop(ctx, it, svc) }?.let { act ->
             if (injectToOwnWindow(code, long = k == "oklong")) return CommandResult(true, via = "Spectra")
             if (sendToActivity(act, code, long = k == "oklong")) return CommandResult(true, via = "Spectra")
         }

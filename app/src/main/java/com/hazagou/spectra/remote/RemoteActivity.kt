@@ -18,6 +18,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -408,25 +410,61 @@ class RemoteActivity : ComponentActivity() {
             Segmented(listOf("Controle", "Apps"), tab) { tab = it }
             Message(message, onMessage)
             if (tab == 0) {
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    if (!otherApps) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x33F59E0B)).padding(12.dp)) {
-                        Text("No aparelho, ative \"Spectra — Botão Home e controle\" em Acessibilidade para controlar também outros apps (YouTube, Netflix…).",
-                            color = Color(0xFFFDE68A), fontSize = 13.sp)
+                // Sem rolagem: tudo se ajusta ao tamanho da tela (celular em pé, deitado, tablet)
+                BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    val W = maxWidth; val H = maxHeight
+                    val warn = !otherApps
+                    val warnH = if (warn) 64.dp else 0.dp
+                    if (W > H * 1.15f) {
+                        // deitado: setas à esquerda, botões à direita
+                        val d = minOf(H - warnH, W * 0.46f).coerceAtLeast(150.dp)
+                        Column(Modifier.fillMaxSize()) {
+                            if (warn) A11yWarning()
+                            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Box(Modifier.width(d), contentAlignment = Alignment.Center) { DPad(d, ::send) }
+                                val k = ((H - warnH - 56.dp - 50.dp) / 4).coerceIn(40.dp, 64.dp)
+                                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
+                                    KeyRows(k, ::send)
+                                    TextSender(client, onMessage)
+                                }
+                            }
+                        }
+                    } else {
+                        // em pé: altura dos botões e tamanho do círculo calculados pelo espaço que sobra
+                        val k = (H * 0.085f).coerceIn(44.dp, 66.dp)
+                        val hint = H > 640.dp
+                        val fixed = warnH + k * 4 + 56.dp + (if (hint) 18.dp else 0.dp) + 8.dp * 7
+                        val d = minOf(W - 24.dp, H - fixed).coerceIn(150.dp, 300.dp)
+                        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
+                            if (warn) A11yWarning()
+                            KeyRow { Key("back", "Voltar", ::send, h = k); Key("home", "Início", ::send, h = k); Key("menu", "Menu", ::send, h = k) }
+                            DPad(d, ::send)
+                            if (hint) Text("Deslize no círculo para navegar • segure OK para opções", color = Muted, fontSize = 11.sp, maxLines = 1)
+                            KeyRow { Key("voldown", "Vol −", ::send, h = k); Key("mute", "Mudo", ::send, h = k); Key("volup", "Vol +", ::send, h = k) }
+                            KeyRow { Key("rew", null, ::send, h = k); Key("play", null, ::send, highlight = true, h = k); Key("ff", null, ::send, h = k) }
+                            KeyRow { Key("prev", null, ::send, h = k); Key("settings", "Ajustes", ::send, h = k); Key("next", null, ::send, h = k) }
+                            TextSender(client, onMessage)
+                        }
                     }
-                    KeyRow { Key("back", "Voltar", ::send); Key("home", "Início", ::send); Key("menu", "Menu", ::send) }
-                    DPad(::send)
-                    Text("Deslize no círculo para navegar • segure OK para opções", color = Muted, fontSize = 12.sp)
-                    KeyRow { Key("voldown", "Vol −", ::send); Key("mute", "Mudo", ::send); Key("volup", "Vol +", ::send) }
-                    KeyRow { Key("rew", null, ::send); Key("play", null, ::send, highlight = true); Key("ff", null, ::send) }
-                    KeyRow { Key("prev", null, ::send); Key("settings", "Ajustes", ::send); Key("next", null, ::send) }
-                    TextSender(client, onMessage)
-                    Spacer(Modifier.height(24.dp))
                 }
             } else AppsGrid(client, onMessage)
         }
+    }
+
+    @Composable
+    private fun A11yWarning() {
+        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x33F59E0B)).padding(10.dp)) {
+            Text("No aparelho, ative \"Spectra — Botão Home e controle\" em Acessibilidade para controlar outros apps.",
+                color = Color(0xFFFDE68A), fontSize = 12.sp, maxLines = 2)
+        }
+    }
+
+    @Composable
+    private fun KeyRows(k: androidx.compose.ui.unit.Dp, send: (String) -> Unit) {
+        KeyRow { Key("back", "Voltar", send, h = k); Key("home", "Início", send, h = k); Key("menu", "Menu", send, h = k) }
+        KeyRow { Key("voldown", "Vol −", send, h = k); Key("mute", "Mudo", send, h = k); Key("volup", "Vol +", send, h = k) }
+        KeyRow { Key("rew", null, send, h = k); Key("play", null, send, highlight = true, h = k); Key("ff", null, send, h = k) }
+        KeyRow { Key("prev", null, send, h = k); Key("settings", "Ajustes", send, h = k); Key("next", null, send, h = k) }
     }
 
     @Composable
@@ -444,11 +482,11 @@ class RemoteActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun DPad(send: (String) -> Unit) {
+    private fun DPad(d: androidx.compose.ui.unit.Dp, send: (String) -> Unit) {
         val lk = LocalLook.current
         var drag by remember { mutableStateOf(Offset.Zero) }
         Box(
-            Modifier.size(280.dp).clip(CircleShape)
+            Modifier.size(d).clip(CircleShape)
                 .background(Brush.radialGradient(listOf(CardHigh, Card, lk.accent.glow)))
                 .border(2.dp, Brush.sweepGradient(listOf(lk.accent.color.copy(alpha = 0.6f), Color.White.copy(alpha = 0.06f), lk.accent.color.copy(alpha = 0.6f))), CircleShape)
                 .pointerInput(Unit) {
@@ -462,32 +500,32 @@ class RemoteActivity : ComponentActivity() {
                     ) { change, amount -> change.consume(); drag += amount }
                 }
         ) {
-            PadKey("up", Alignment.TopCenter, send)
-            PadKey("down", Alignment.BottomCenter, send)
-            PadKey("left", Alignment.CenterStart, send)
-            PadKey("right", Alignment.CenterEnd, send)
+            PadKey("up", Alignment.TopCenter, d, send)
+            PadKey("down", Alignment.BottomCenter, d, send)
+            PadKey("left", Alignment.CenterStart, d, send)
+            PadKey("right", Alignment.CenterEnd, d, send)
             val src = remember { MutableInteractionSource() }
             val pressed by src.collectIsPressedAsState()
             val sc by animateFloatAsState(if (pressed) 0.92f else 1f, label = "ok")
             Box(
-                Modifier.align(Alignment.Center).size(116.dp).scale(sc).clip(CircleShape)
+                Modifier.align(Alignment.Center).size(d * 0.41f).scale(sc).clip(CircleShape)
                     .background(Brush.radialGradient(listOf(lk.accent.color, lk.accent.color.copy(alpha = 0.75f))))
                     .border(3.dp, Color.White.copy(alpha = 0.18f), CircleShape)
                     .combinedClickable(interactionSource = src, indication = null, onLongClick = { send("oklong") }, onClick = { send("ok") }),
                 contentAlignment = Alignment.Center
-            ) { Text("OK", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("OK", color = Color.White, fontSize = (d.value * 0.085f).sp, fontWeight = FontWeight.Bold) }
         }
     }
 
     @Composable
-    private fun BoxScope.PadKey(key: String, align: Alignment, send: (String) -> Unit) {
+    private fun BoxScope.PadKey(key: String, align: Alignment, d: androidx.compose.ui.unit.Dp, send: (String) -> Unit) {
         val src = remember { MutableInteractionSource() }
         val pressed by src.collectIsPressedAsState()
         val sc by animateFloatAsState(if (pressed) 0.85f else 1f, label = key)
-        Box(Modifier.align(align).size(82.dp).scale(sc).clip(CircleShape)
+        Box(Modifier.align(align).size(d * 0.29f).scale(sc).clip(CircleShape)
             .background(if (pressed) Color.White.copy(alpha = 0.10f) else Color.Transparent)
             .combinedClickable(interactionSource = src, indication = null, onClick = { send(key) }),
-            contentAlignment = Alignment.Center) { RemoteIcon(key, LocalLook.current.icons, size = 30.dp) }
+            contentAlignment = Alignment.Center) { RemoteIcon(key, LocalLook.current.icons, size = d * 0.11f) }
     }
 
     @Composable
@@ -495,20 +533,20 @@ class RemoteActivity : ComponentActivity() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), content = content)
 
     @Composable
-    private fun RowScope.Key(key: String, label: String?, send: (String) -> Unit, highlight: Boolean = false) {
+    private fun RowScope.Key(key: String, label: String?, send: (String) -> Unit, highlight: Boolean = false, h: androidx.compose.ui.unit.Dp = 66.dp) {
         val lk = LocalLook.current
         val src = remember { MutableInteractionSource() }
         val pressed by src.collectIsPressedAsState()
         val sc by animateFloatAsState(if (pressed) 0.93f else 1f, label = key)
         Column(
-            Modifier.weight(1f).height(66.dp).scale(sc).clip(RoundedCornerShape(20.dp))
+            Modifier.weight(1f).height(h).scale(sc).clip(RoundedCornerShape(20.dp))
                 .background(if (highlight) lk.accent.color.copy(alpha = 0.28f) else if (pressed) CardHigh else Card)
                 .border(1.dp, if (highlight) lk.accent.color.copy(alpha = 0.5f) else Line, RoundedCornerShape(20.dp))
                 .combinedClickable(interactionSource = src, indication = null, onClick = { send(key) }),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
         ) {
-            RemoteIcon(key, lk.icons, size = 24.dp)
-            if (label != null) { Spacer(Modifier.height(3.dp)); Text(label, color = Muted, fontSize = 11.sp) }
+            RemoteIcon(key, lk.icons, size = (h * 0.36f).coerceIn(18.dp, 24.dp))
+            if (label != null && h >= 54.dp) { Spacer(Modifier.height(3.dp)); Text(label, color = Muted, fontSize = 11.sp) }
         }
     }
 
