@@ -75,9 +75,34 @@ class HomeOverrideService : AccessibilityService() {
 
     // ================================================================ botão Home
 
+    private var homeCheckedAt = 0L
+    private var spectraIsDefault = false
+
+    /** O Spectra é a tela inicial padrão do aparelho? (confere no máximo a cada 5 s) */
+    private fun spectraIsDefaultHome(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (now - homeCheckedAt > 5000) {
+            homeCheckedAt = now
+            spectraIsDefault = runCatching {
+                @Suppress("DEPRECATION")
+                packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)
+                    ?.activityInfo?.packageName == packageName
+            }.getOrDefault(false)
+        }
+        return spectraIsDefault
+    }
+
+    /**
+     * Na TV o Spectra assume o botão Home e volta para a frente quando a tela inicial original aparece.
+     * Em tablet/celular isso só acontece se o Spectra for a tela inicial padrão; senão ele fica quieto
+     * (abre só quando você chama, inclusive pelo Home do controle no celular).
+     */
+    fun takeOverHome(): Boolean = isTv || spectraIsDefaultHome()
+
     /** Botão Home do controle: abre o Spectra direto. Segurar Home abre o painel da TV (como no sistema). */
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode != KeyEvent.KEYCODE_HOME) return false
+        if (!takeOverHome()) return false   // tablet/celular sem o Spectra como padrão: o Home é do sistema
         when (event.action) {
             KeyEvent.ACTION_DOWN -> {
                 if (event.repeatCount == 0) { homeDown = true; homeLong = false }
@@ -163,7 +188,8 @@ class HomeOverrideService : AccessibilityService() {
 
     fun remoteGlobal(action: String): Boolean = when (action) {
         "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
-        "home" -> { openSpectra(cover = true); true }   // v3.2: direto no Spectra, sem passar pela tela do sistema
+        // Home do controle: sempre chama o Spectra (na TV e no tablet), mesmo quando ele não é o launcher padrão
+        "home" -> { openSpectra(cover = takeOverHome()); true }
         else -> false
     }
 
@@ -338,6 +364,7 @@ class HomeOverrideService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg !in stockLaunchers) return
+        if (!takeOverHome()) return   // tablet/celular sem o Spectra como padrão: não volta sozinho para a frente
         // a tela inicial original apareceu (ex.: saiu de um app aberto fora do Spectra): cobre e traz o Spectra
         openSpectra(cover = true)
     }
