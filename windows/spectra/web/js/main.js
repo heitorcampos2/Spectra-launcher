@@ -17,6 +17,9 @@ export const CH = {
   'sintonia-movies': { name: 'Sintonia · Filmes', icon: '🎬', sub: 'Favoritos e lançamentos bem avaliados' },
   'sintonia-series': { name: 'Sintonia · Séries', icon: '🍿', sub: 'Favoritas e lançamentos bem avaliados' },
   'recent-apps': { name: 'Usados recentemente', icon: '🕘', sub: 'Os últimos apps que você abriu' },
+  'yt-live': { name: 'YouTube · Ao vivo', icon: '🔴', sub: 'Canais do YouTube ao vivo agora (do Sintonia)' },
+  'yt-videos': { name: 'YouTube · Novos vídeos', icon: '▶️', sub: 'Vídeos novos dos canais que você segue no Sintonia' },
+  streaming: { name: 'Streaming', icon: '🍿', sub: 'Crunchyroll, Globoplay e Spotify: continuar de onde parou' },
 };
 export const SIZE_K = { P: 0.8, M: 1, G: 1.25, GG: 1.55 };
 export const KIND_LABEL = {
@@ -584,6 +587,12 @@ export async function openSintonia(route) {
 }
 
 function openMedia(m) {
+  if (m.url) {
+    // no PC o app instalado (ex.: Spotify) tem prioridade; senão abre o site
+    const a = S.apps.find((x) => (x.name || '').toLowerCase() === (m.app || '').toLowerCase());
+    if (a) return launch(a);
+    return api.post('/api/open-url', { url: m.url }).then(() => toast(`Abrindo ${m.title}…`, { ms: 1800 })).catch((e) => toast(e.message, { type: 'error' }));
+  }
   if (m.launch) {
     const a = S.byKey.get(m.launch);
     if (a) return launch(a);

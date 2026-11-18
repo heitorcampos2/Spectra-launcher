@@ -39,9 +39,13 @@ class SpectraNotificationService : NotificationListenerService() {
         }
     }
 
+    private val media = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     override fun onListenerConnected() {
         instance = this
         refresh()
+        // o que já está tocando entra no "Continuar" do tablet
+        media.execute { com.hazagou.spectra.data.MediaHistory.scan(this, android.content.ComponentName(this, SpectraNotificationService::class.java)) }
     }
 
     override fun onListenerDisconnected() {
@@ -49,7 +53,14 @@ class SpectraNotificationService : NotificationListenerService() {
         _items.value = emptyList()
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        refresh()
+        val token = runCatching {
+            @Suppress("DEPRECATION")
+            sbn?.notification?.extras?.getParcelable<android.media.session.MediaSession.Token>(Notification.EXTRA_MEDIA_SESSION)
+        }.getOrNull()
+        if (token != null) media.execute { com.hazagou.spectra.data.MediaHistory.record(this, token) }
+    }
     override fun onNotificationRemoved(sbn: StatusBarNotification?) = refresh()
 
     private fun refresh() {

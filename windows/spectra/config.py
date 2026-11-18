@@ -37,11 +37,14 @@ DEFAULT_SETTINGS = {
         {"id": "sintonia-movies", "on": True},
         {"id": "sintonia-series", "on": True},
         {"id": "recent-apps", "on": True},
+        {"id": "yt-live", "on": True},
+        {"id": "yt-videos", "on": True},
+        {"id": "streaming", "on": True},
     ],
     "sintonia": {"url": "http://127.0.0.1:8787", "password": ""},
     # ordem das fileiras da tela inicial (seções "sec:" e canais "ch:")
     "homeOrder": ["ch:next", "sec:fav", "sec:tv", "ch:sintonia-live", "sec:chrome", "ch:sintonia-movies",
-                  "ch:sintonia-series", "sec:games", "ch:recent-apps", "sec:all"],
+                  "ch:sintonia-series", "ch:yt-live", "ch:yt-videos", "ch:streaming", "sec:games", "ch:recent-apps", "sec:all"],
     "onboarded": False,
 }
 

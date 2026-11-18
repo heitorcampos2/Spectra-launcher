@@ -1,9 +1,18 @@
-﻿SPECTRA PARA WINDOWS 1.0.1 - COMO INSTALAR
+SPECTRA PARA WINDOWS 1.0.2 - COMO INSTALAR
 Desenvolvido por Heitor Campos (GitHub: heitorcampos2)
 ==========================================================
 
 PASTAS
-  Windows\   -> Spectra-Windows-1.0.1.zip  (PC com Windows 10 ou 11)
+  Windows\   -> Spectra-Windows-1.0.2.zip  (PC com Windows 10 ou 11)
+
+----------------------------------------------------------
+NOVIDADES DA 1.0.2
+----------------------------------------------------------
+- Novas fileiras: YouTube ao vivo e Novos vídeos dos seus canais
+  (vêm do Sintonia 3.1.30 ou mais novo).
+- Fileira Streaming: Crunchyroll, Globoplay e Spotify (abre o app
+  instalado no PC ou o site).
+- "Ver a seguir" e canais favoritos do Sintonia abrem direto no item.
 
 ----------------------------------------------------------
 NOVIDADES DA 1.0.1
@@ -40,7 +49,7 @@ DA 1.0.0 (primeira versão para Windows)
 ----------------------------------------------------------
 INSTALAR
 ----------------------------------------------------------
-1. Extraia o Spectra-Windows-1.0.1.zip (botão direito > Extrair tudo).
+1. Extraia o Spectra-Windows-1.0.2.zip (botão direito > Extrair tudo).
 2. Dê dois cliques em "Instalar Spectra.bat".
    - Se aparecer "O Windows protegeu o computador": Mais informações
      > Executar assim mesmo.

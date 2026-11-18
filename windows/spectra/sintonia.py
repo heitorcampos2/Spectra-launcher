@@ -55,6 +55,39 @@ def _clean(name):
     return re.sub(r"\s*[(\[](19|20)\d\d[)\]]\s*$", "", name or "").strip()
 
 
+def _link(q):
+    """Abre o item direto no Sintonia 3.1.30+ (/?a=…); versões antigas só abrem a tela inicial."""
+    return "?" + urllib.parse.urlencode({k: str(v) for k, v in q.items()})
+
+
+STREAMING = [
+    {"key": "crunchyroll", "title": "Crunchyroll", "desc": "Continuar assistindo animes", "url": "https://www.crunchyroll.com/pt-br/history",
+     "img": "/img/streaming/crunchyroll.svg", "app": "Crunchyroll", "wide": True},
+    {"key": "globoplay", "title": "Globoplay", "desc": "Continuar assistindo", "url": "https://globoplay.globo.com/minha-lista/",
+     "img": "/img/streaming/globoplay.svg", "app": "Globoplay", "wide": True},
+    {"key": "spotify", "title": "Spotify", "desc": "Tocados recentemente", "url": "https://open.spotify.com/collection/tracks",
+     "img": "/img/streaming/spotify.svg", "app": "Spotify", "wide": True},
+]
+
+
+def youtube_rows(cfg, limit=30):
+    """Ao vivo no YouTube e Novos vídeos dos seus canais (do Sintonia 3.1.30+, endereço /api/home)."""
+    base = (cfg or {}).get("url") or "http://127.0.0.1:8787"
+    pw = (cfg or {}).get("password") or ""
+    try:
+        home = _cached(("home", base), 300, lambda: _get(base, "/api/home", pw, 40))
+    except Unavailable:
+        return {}
+    out = {}
+    for row in home.get("rows") or []:
+        if row.get("id") not in ("yt-live", "yt-videos"):
+            continue
+        out[row["id"]] = [{"key": "yt" + it["yt"], "title": it.get("title", ""), "desc": it.get("subtitle", ""),
+                           "img": it.get("img", ""), "wide": True, "app": "YouTube",
+                           "url": "https://www.youtube.com/watch?v=" + it["yt"]} for it in (row.get("items") or [])[:limit] if it.get("yt")]
+    return out
+
+
 def channels(cfg, limit=30):
     """Devolve {'ok', 'error', 'rows': {id: [itens]}} com os canais do Sintonia."""
     base = (cfg or {}).get("url") or "http://127.0.0.1:8787"
@@ -90,8 +123,8 @@ def channels(cfg, limit=30):
             "key": f"{kind}{x.get('id')}", "title": _clean(x.get("seriesName") if ep else x.get("name")),
             "desc": (f"T{x.get('season')} E{x.get('episode')} · " if ep else "") + f"Continuar de {_fmt(pos)}",
             "img": x.get("img") or "", "progress": round(pos / dur, 3) if dur else 0, "app": "Sintonia",
-            "wide": True, "open": f"#/serie/{urllib.parse.quote(str(x.get('seriesId') or ''))}" if ep
-            else f"#/movie/{urllib.parse.quote(str(x.get('id')))}", "ts": x.get("ts") or 0})
+            "wide": True, "open": _link({"a": "resume", "k": "episode", "id": x.get("id"), "s": x.get("seriesId") or "", "n": x.get("seriesName") or ""})
+            if ep else _link({"a": "resume", "k": "movie", "id": x.get("id")}), "ts": x.get("ts") or 0})
         if len(rows["next"]) >= limit:
             break
 
@@ -107,7 +140,7 @@ def channels(cfg, limit=30):
                 if c:
                     rows["sintonia-live"].append({"key": f"live{cid}", "title": c.get("name", ""), "desc": "Ao vivo",
                                                   "img": c.get("logo") or "", "app": "Sintonia", "logo": True,
-                                                  "open": "#/live"})
+                                                  "open": _link({"a": "play", "k": "live", "id": cid})})
         except Unavailable:
             pass
     for kind, row, route in (("movie", "sintonia-movies", "movie"), ("series", "sintonia-series", "serie")):

@@ -1,12 +1,13 @@
 {
-  "version": "1.0.1",
-  "date": "2026-11-01",
+  "version": "1.0.2",
+  "date": "2026-11-18",
   "notes": [
-    "Apps novos aparecem sozinhos, sem fechar e abrir o Spectra (inclusive apps instalados pelo Chrome/Edge)",
-    "Primeira versão para Windows: seções, canais do Sintonia, wallpaper e as mesmas opções do Android TV"
+    "Novas fileiras: YouTube ao vivo e Novos vídeos dos seus canais (do Sintonia)",
+    "Fileira Streaming: Crunchyroll, Globoplay e Spotify (abre o app instalado ou o site)",
+    "Continuar assistindo e canais favoritos do Sintonia abrem direto no item (Sintonia 3.1.30)"
   ],
   "files": {
-    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.1.zip"
+    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.2.zip"
   },
   "page": "https://github.com/heitorcampos2/Spectra-launcher/tree/main/windows"
 }

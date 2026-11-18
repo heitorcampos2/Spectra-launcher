@@ -15,7 +15,7 @@ Desenvolvedor: **Heitor Campos** ([@heitorcampos2](https://github.com/heitorcamp
 > Depois disso, atualize pelo próprio app: **MENU ☰ › Atualizações › Atualizar agora**.
 > Todas as versões ficam em [Releases](https://github.com/heitorcampos2/Spectra-launcher/releases).
 
-> **Windows:** existe também o **[Spectra para Windows](windows/)**: a mesma tela inicial no PC, com apps do Windows, apps do Chrome e canais do Sintonia. [⬇ Baixar Spectra-Windows-1.0.1.zip](https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.1.zip)
+> **Windows:** existe também o **[Spectra para Windows](windows/)**: a mesma tela inicial no PC, com apps do Windows, apps do Chrome e canais do Sintonia. [⬇ Baixar Spectra-Windows-1.0.2.zip](https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.2.zip)
 
 ## Novidades
 - **Novo visual padrão** (instalação nova): menus e cartões escuros em **Grafite** (sem tom roxo), **wallpaper de paisagem** já aplicado, **sem título** e **sem ícone de usuário** no topo. Tudo continua ajustável em Configurações.

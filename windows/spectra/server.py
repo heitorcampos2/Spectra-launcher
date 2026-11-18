@@ -277,6 +277,9 @@ class App:
                 recent.append({"key": a["key"], "title": a["name"], "desc": "Aberto " + _ago(r["t"]), "app": a["name"],
                                "launch": a["key"], "icon": f"/api/icon/{a['key']}"})
         rows["recent-apps"] = recent[:int(s["perf"].get("perRow") or 30)]
+        if data["ok"]:
+            rows.update(sintonia.youtube_rows(s.get("sintonia"), int(s["perf"].get("perRow") or 30)))
+        rows["streaming"] = [dict(x) for x in sintonia.STREAMING]
         return {"sintonia": {"ok": data["ok"], "error": data["error"],
                              "installed": any(a["kind"] == "sintonia" for a in self.index.list())},
                 "rows": rows}
@@ -580,7 +583,7 @@ def r_channels(app, h, m, q, body):
 @route("POST", r"/api/sintonia/open")
 def r_sintonia_open(app, h, m, q, body):
     route_ = body.get("route") or ""
-    if route_ and not re.match(r"^#/[\w/%.\-]*$", route_):
+    if route_ and not re.match(r"^(#/[\w/%.\-]*|\?[\w=&%.+\-]*)$", route_):
         raise ApiError("Endereço inválido")
     return {"ok": True, "message": app.open_sintonia(route_)}
 

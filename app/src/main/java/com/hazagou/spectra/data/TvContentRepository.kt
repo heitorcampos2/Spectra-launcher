@@ -138,7 +138,12 @@ class TvContentRepository(private val context: Context) {
             android.util.Log.i("SpectraTv", "diagnóstico: ${diagnostics.value}")
         }
         rawChannels = 0; rawPreview = 0; rawWatchNext = 0
-        if (!hasProvider) { diag("sem provedor de canais (celular/tablet)"); return@withContext State.NoProvider }
+        if (!hasProvider) {
+            // tablet/celular: canais montados a partir do Sintonia + o que tocou por último nos apps de mídia
+            val own = runCatching { SintoniaFeed(context).load() }.getOrNull()
+            diag("sem provedor de canais (celular/tablet)" + if (own != null) " · usando Sintonia/mídia" else "", own)
+            return@withContext own ?: State.NoProvider
+        }
         if (!hasPermission) { diag("sem permissão de leitura"); return@withContext State.NoPermission }
         try {
             buildContent().also { diag(ready = it) }
@@ -291,6 +296,12 @@ class TvContentRepository(private val context: Context) {
     fun open(program: TvProgram, channel: TvChannel? = null, apps: AppRepository): Boolean {
         val candidates = listOfNotNull(program.intentUri, channel?.appLinkIntentUri)
         for (uri in candidates) {
+            if (uri.startsWith("spectra-media:")) {
+                val pkg = uri.removePrefix("spectra-media:")
+                val ok = apps.launch(pkg)
+                MediaHistory.resume(context, pkg, android.content.ComponentName(context, com.hazagou.spectra.service.SpectraNotificationService::class.java))
+                return ok
+            }
             val ok = runCatching {
                 val intent = if (uri.startsWith("intent:")) Intent.parseUri(uri, Intent.URI_INTENT_SCHEME)
                 else Intent(Intent.ACTION_VIEW, Uri.parse(uri))
