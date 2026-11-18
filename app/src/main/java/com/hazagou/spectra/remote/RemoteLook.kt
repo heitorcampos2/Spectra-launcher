@@ -135,13 +135,13 @@ private fun DrawScope.drawLineIcon(key: String, c: Color) {
             }
         }
         "settings" -> {
-            drawCircle(c, radius = 0.17f * w, style = st)
+            val cx = 0.5f * w; val cy = 0.5f * h
             for (i in 0 until 8) {
-                val a = Math.toRadians(i * 45.0)
-                val cx = 0.5f * w; val cy = 0.5f * h
-                drawLine(c, Offset(cx + (0.27f * w * Math.cos(a)).toFloat(), cy + (0.27f * h * Math.sin(a)).toFloat()),
-                    Offset(cx + (0.38f * w * Math.cos(a)).toFloat(), cy + (0.38f * h * Math.sin(a)).toFloat()), strokeWidth = sw * 1.3f, cap = StrokeCap.Round)
+                val ang = Math.toRadians(i * 45.0 + 22.5)
+                drawLine(c, Offset(cx + (0.26f * w * Math.cos(ang)).toFloat(), cy + (0.26f * h * Math.sin(ang)).toFloat()),
+                    Offset(cx + (0.40f * w * Math.cos(ang)).toFloat(), cy + (0.40f * h * Math.sin(ang)).toFloat()), strokeWidth = sw * 2.2f, cap = StrokeCap.Butt)
             }
+            drawCircle(c, radius = 0.235f * w, style = Stroke(width = sw * 1.7f))
         }
         "apps" -> for (r in 0..1) for (col in 0..1) drawRoundRect(c, Offset((0.16f + col * 0.38f) * w, (0.16f + r * 0.38f) * h),
             Size(0.30f * w, 0.30f * h), androidx.compose.ui.geometry.CornerRadius(0.08f * w), style = st)
