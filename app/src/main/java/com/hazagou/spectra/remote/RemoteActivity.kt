@@ -376,6 +376,17 @@ class RemoteActivity : ComponentActivity() {
         var tab by remember { mutableStateOf(0) }
         var tvInfo by remember { mutableStateOf("") }
         var lastVia by remember { mutableStateOf<String?>(null) }
+        var touchpad by remember { mutableStateOf(false) }
+        // touchpad: junta os movimentos do dedo e manda no máximo ~25 vezes por segundo
+        val pending = remember { floatArrayOf(0f, 0f) }
+        LaunchedEffect(client, touchpad) {
+            while (touchpad) {
+                delay(40)
+                val dx: Float; val dy: Float
+                synchronized(pending) { dx = pending[0]; dy = pending[1]; pending[0] = 0f; pending[1] = 0f }
+                if (dx != 0f || dy != 0f) { val r = client.move(dx, dy); if (!r.ok) onMessage(r.message) }
+            }
+        }
 
         LaunchedEffect(client) {
             while (true) {
@@ -383,6 +394,7 @@ class RemoteActivity : ComponentActivity() {
                 online = info != null
                 if (info != null) {
                     otherApps = info.optBoolean("controlsOtherApps", true)
+                    touchpad = info.optBoolean("touch") && info.optBoolean("gestures", false)
                     tvInfo = buildString {
                         append("Spectra ").append(info.optString("version"))
                         if (!info.optBoolean("a11y", true)) append(" · acessibilidade desligada")
@@ -421,7 +433,7 @@ class RemoteActivity : ComponentActivity() {
                         Column(Modifier.fillMaxSize()) {
                             if (warn) A11yWarning()
                             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Box(Modifier.width(d), contentAlignment = Alignment.Center) { DPad(d, ::send) }
+                                Box(Modifier.width(d), contentAlignment = Alignment.Center) { DPad(d, ::send, if (touchpad) { dx: Float, dy: Float -> synchronized(pending) { pending[0] += dx; pending[1] += dy } } else null) }
                                 val k = ((H - warnH - 56.dp - 50.dp) / 4).coerceIn(40.dp, 64.dp)
                                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
                                     KeyRows(k, ::send)
@@ -438,8 +450,9 @@ class RemoteActivity : ComponentActivity() {
                         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
                             if (warn) A11yWarning()
                             KeyRow { Key("back", "Voltar", ::send, h = k); Key("home", "Início", ::send, h = k); Key("menu", "Menu", ::send, h = k) }
-                            DPad(d, ::send)
-                            if (hint) Text("Deslize no círculo para navegar • segure OK para opções", color = Muted, fontSize = 11.sp, maxLines = 1)
+                            DPad(d, ::send, if (touchpad) { dx: Float, dy: Float -> synchronized(pending) { pending[0] += dx; pending[1] += dy } } else null)
+                            if (hint) Text(if (touchpad) "Arraste no círculo para mover o cursor • OK toca • setas na borda rolam" else "Deslize no círculo para navegar • segure OK para opções",
+                                color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             KeyRow { Key("voldown", "Vol −", ::send, h = k); Key("mute", "Mudo", ::send, h = k); Key("volup", "Vol +", ::send, h = k) }
                             KeyRow { Key("rew", null, ::send, h = k); Key("play", null, ::send, highlight = true, h = k); Key("ff", null, ::send, h = k) }
                             KeyRow { Key("prev", null, ::send, h = k); Key("settings", "Ajustes", ::send, h = k); Key("next", null, ::send, h = k) }
@@ -482,15 +495,17 @@ class RemoteActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun DPad(d: androidx.compose.ui.unit.Dp, send: (String) -> Unit) {
+    private fun DPad(d: androidx.compose.ui.unit.Dp, send: (String) -> Unit, onMove: ((Float, Float) -> Unit)? = null) {
+        val density = androidx.compose.ui.platform.LocalDensity.current.density
         val lk = LocalLook.current
         var drag by remember { mutableStateOf(Offset.Zero) }
         Box(
             Modifier.size(d).clip(CircleShape)
                 .background(Brush.radialGradient(listOf(CardHigh, Card, lk.accent.glow)))
                 .border(2.dp, Brush.sweepGradient(listOf(lk.accent.color.copy(alpha = 0.6f), Color.White.copy(alpha = 0.06f), lk.accent.color.copy(alpha = 0.6f))), CircleShape)
-                .pointerInput(Unit) {
-                    detectDragGestures(
+                .pointerInput(onMove != null) {
+                    if (onMove != null) detectDragGestures { change, amount -> change.consume(); onMove(amount.x / density, amount.y / density) }
+                    else detectDragGestures(
                         onDragStart = { drag = Offset.Zero },
                         onDragEnd = {
                             val (x, y) = drag

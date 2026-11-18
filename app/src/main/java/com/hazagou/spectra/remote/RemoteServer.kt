@@ -134,6 +134,12 @@ object RemoteServer {
                 val r = RemoteCommands.key(appContext, k)
                 send(out, if (r.ok) 200 else 409, json(r.toJson()))
             }
+            "/api/move" -> {
+                val dx = req.query["dx"]?.toFloatOrNull() ?: 0f
+                val dy = req.query["dy"]?.toFloatOrNull() ?: 0f
+                val r = RemoteCommands.move(appContext, dx, dy)
+                send(out, if (r.ok) 200 else 409, json(r.toJson()))
+            }
             "/api/text" -> {
                 val text = runCatching { JSONObject(req.body).optString("text") }.getOrElse { req.body }
                 val r = RemoteCommands.text(appContext, text)

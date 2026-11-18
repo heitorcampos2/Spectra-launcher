@@ -18,6 +18,7 @@ class RemoteClient(val tv: PairedTv) {
     fun iconUrl(pkg: String) = "$base/api/icon?pkg=${Uri.encode(pkg)}&t=${tv.token}"
 
     suspend fun key(k: String): CommandResult = post("/api/key?k=${Uri.encode(k)}", JSONObject())
+    suspend fun move(dx: Float, dy: Float): CommandResult = post("/api/move?dx=$dx&dy=$dy", JSONObject())
     suspend fun text(t: String): CommandResult = post("/api/text", JSONObject().put("text", t))
     suspend fun launch(pkg: String): CommandResult = post("/api/launch?pkg=${Uri.encode(pkg)}", JSONObject())
 

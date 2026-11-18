@@ -242,70 +242,144 @@ class HomeOverrideService : AccessibilityService() {
      * setas do Android não fazem nada visível: aqui ↑ ↓ ← → rolam a tela (lista, página, carrossel)
      * e OK toca no item selecionado ou no centro da tela.
      */
+    // ------------------------------------------------ cursor (tablet/celular)
+
+    @Volatile private var curX = -1f
+    @Volatile private var curY = -1f
+    private var cursorView: View? = null
+    private val hideCursor = Runnable { cursorView?.let { v -> runCatching { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(v) } }; cursorView = null }
+
+    /** Package de apps que só entendem teclas de verdade (tela desenhada por eles, sem botões acessíveis). */
+    private val keyApps = setOf("com.termux.x11")
+
+    /**
+     * Setas e OK num aparelho de toque (tablet/celular): um cursor aparece na tela e anda com as setas;
+     * OK toca onde ele está (segurar OK = toque longo) e, ao chegar na borda, a tela rola nessa direção.
+     * Funciona em qualquer app, inclusive na tela inicial do aparelho. No Ubuntu (Termux:X11) vão teclas de verdade.
+     */
     fun remoteTouch(key: String): String? {
-        val root = rootInActiveWindow
-        if (key == "ok" || key == "oklong") {
-            val focus = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { !it.isEditable }
-                ?: root?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
-            var n = focus
-            val action = if (key == "oklong") AccessibilityNodeInfo.ACTION_LONG_CLICK else AccessibilityNodeInfo.ACTION_CLICK
-            while (n != null) {
-                if ((key == "ok" && n.isClickable) || (key == "oklong" && n.isLongClickable)) { if (n.performAction(action)) return "tocou no item"; break }
-                n = n.parent
+        val pkg = activePackage()
+        if (pkg in keyApps && Build.VERSION.SDK_INT >= 33) {
+            val g = when (key) {
+                "up" -> GLOBAL_ACTION_DPAD_UP; "down" -> GLOBAL_ACTION_DPAD_DOWN; "left" -> GLOBAL_ACTION_DPAD_LEFT
+                "right" -> GLOBAL_ACTION_DPAD_RIGHT; else -> GLOBAL_ACTION_DPAD_CENTER
             }
-            // sem item selecionado: OK do sistema (Enter) — serve para Ubuntu/Termux:X11, players e jogos
-            if (key == "ok" && Build.VERSION.SDK_INT >= 33 && performGlobalAction(GLOBAL_ACTION_DPAD_CENTER)) return "tecla OK"
-            val r = screen()
-            return if (gesture(r.exactCenterX(), r.exactCenterY(), r.exactCenterX(), r.exactCenterY(), if (key == "oklong") 700L else 60L)) "toque no centro" else null
+            if (performGlobalAction(g)) return "tecla"
         }
-        val vertical = key == "up" || key == "down"
+        if (!canGesture) return null
+        val r = screen()
+        val shown = cursorView != null && curX >= 0
+        if (!shown) { curX = r.exactCenterX(); curY = r.exactCenterY() }
+        when (key) {
+            "ok", "oklong" -> {
+                if (!shown) { showCursor(); return "cursor no centro (aperte OK de novo para tocar)" }
+                val hold = if (key == "oklong") 700L else 50L
+                // o cursor some um instante para o toque não cair nele
+                return if (gesture(curX, curY, curX, curY, hold)) { showCursor(); "tocou" } else null
+            }
+            "up", "down", "left", "right" -> {
+                if (!shown) { showCursor(); return "cursor no centro" }
+                val step = minOf(r.width(), r.height()) * 0.08f
+                val m = r.width() * 0.03f
+                val nx = curX + when (key) { "left" -> -step; "right" -> step; else -> 0f }
+                val ny = curY + when (key) { "up" -> -step; "down" -> step; else -> 0f }
+                val atEdge = nx < m || nx > r.width() - m || ny < m || ny > r.height() - m
+                if (atEdge) { showCursor(); return if (edgeScroll(key)) "rolou a tela" else "borda" }
+                curX = nx; curY = ny
+                showCursor(); return "cursor"
+            }
+        }
+        return null
+    }
+
+    /** Move o cursor pelo touchpad do celular (dx/dy em pixels do tablet). */
+    fun cursorMove(dx: Float, dy: Float): String? {
+        if (!canGesture) return null
+        val r = screen()
+        if (cursorView == null || curX < 0) { curX = r.exactCenterX(); curY = r.exactCenterY() }
+        curX = (curX + dx).coerceIn(0f, r.width() - 1f)
+        curY = (curY + dy).coerceIn(0f, r.height() - 1f)
+        showCursor()
+        return "cursor"
+    }
+
+    /** Rolagem com dois dedos do touchpad: arrasta a tela a partir do cursor. */
+    fun cursorScroll(dy: Float): String? {
+        if (!canGesture) return null
+        val r = screen()
+        val x = if (curX >= 0) curX else r.exactCenterX()
+        val y = if (curY >= 0) curY else r.exactCenterY()
+        val y2 = (y + dy).coerceIn(1f, r.height() - 1f)
+        return if (gesture(x, y, x, y2, 200L)) "rolou" else null
+    }
+
+    private fun showCursor() {
+        main.post {
+            main.removeCallbacks(hideCursor)
+            val wm = getSystemService(WINDOW_SERVICE) as WindowManager
+            val size = (resources.displayMetrics.density * 28).toInt()
+            val lp = (cursorView?.layoutParams as? WindowManager.LayoutParams) ?: WindowManager.LayoutParams(
+                size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+            ).apply { gravity = android.view.Gravity.TOP or android.view.Gravity.START; windowAnimations = 0 }
+            lp.x = (curX - size / 2f).toInt(); lp.y = (curY - size / 2f).toInt()
+            val v = cursorView
+            if (v == null) {
+                val nv = object : View(this) {
+                    private val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    override fun onDraw(c: android.graphics.Canvas) {
+                        val r = width / 2f
+                        p.style = android.graphics.Paint.Style.FILL; p.color = 0x55000000
+                        c.drawCircle(r, r, r, p)
+                        p.color = 0xCCFFFFFF.toInt(); c.drawCircle(r, r, r * 0.42f, p)
+                        p.style = android.graphics.Paint.Style.STROKE; p.strokeWidth = r * 0.16f; p.color = 0xFF06B6D4.toInt()
+                        c.drawCircle(r, r, r * 0.8f, p)
+                    }
+                }
+                if (runCatching { wm.addView(nv, lp) }.isSuccess) cursorView = nv
+            } else runCatching { wm.updateViewLayout(v, lp) }
+            main.postDelayed(hideCursor, 10_000)   // some sozinho depois de 10 s parado
+        }
+    }
+
+    /** Ao chegar na borda: rola a lista/página nessa direção (ou arrasta a tela). */
+    private fun edgeScroll(key: String): Boolean {
+        val root = rootInActiveWindow
         val a = when (key) {
             "up" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP
             "down" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN
             "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT
-            "right" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
-            else -> return null
+            else -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT
         }
+        val vertical = key == "up" || key == "down"
         val forward = key == "down" || key == "right"
         if (root != null) {
             // 1) a maior área rolável que aceita essa direção
             val all = ArrayList<AccessibilityNodeInfo>(); scrollables(root, all)
             fun area(n: AccessibilityNodeInfo) = Rect().also { n.getBoundsInScreen(it) }.let { it.width().toLong() * it.height() }
             val exact = all.filter { n -> n.actionList.any { it.id == a.id } }.maxByOrNull(::area)
-            if (exact != null && exact.performAction(a.id)) return "rolou a tela"
+            if (exact != null && exact.performAction(a.id)) return true
             // 2) listas antigas só conhecem "avançar/voltar": usa a maior delas no sentido certo
             val generic = all.filter { n ->
                 val r = Rect().also { n.getBoundsInScreen(it) }
                 if (vertical) r.height() >= r.width() / 2 else r.width() > r.height()
             }.maxByOrNull(::area)
             if (generic != null && generic.performAction(
-                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return "rolou a tela"
+                    if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
         }
-        // 3) nada rolável na tela (Ubuntu no Termux:X11, players, jogos, WebView): seta de verdade do sistema
-        if (Build.VERSION.SDK_INT >= 33) {
-            val g = when (key) { "up" -> GLOBAL_ACTION_DPAD_UP; "down" -> GLOBAL_ACTION_DPAD_DOWN; "left" -> GLOBAL_ACTION_DPAD_LEFT; else -> GLOBAL_ACTION_DPAD_RIGHT }
-            if (performGlobalAction(g)) return "tecla de seta"
-        }
-        // 4) último recurso: arrasta o dedo na tela
+        // 3) sem lista acessível: arrasta o dedo na tela
         val r = screen()
         val cx = r.exactCenterX(); val cy = r.exactCenterY()
         val dx = r.width() * 0.3f; val dy = r.height() * 0.25f
-        val ok = when (key) {
+        return when (key) {
             "down" -> gesture(cx, cy + dy, cx, cy - dy)
             "up" -> gesture(cx, cy - dy, cx, cy + dy)
             "right" -> gesture(cx + dx, cy, cx - dx, cy)
             else -> gesture(cx - dx, cy, cx + dx, cy)
         }
-        return if (ok) "arrastou na tela" else null
     }
-
-    /** Pacote do app que está na frente agora (null se não der para saber). */
-    fun activePackage(): String? = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
-
-    /** O Android só deixa arrastar/tocar na tela depois de religar o serviço com a permissão nova. */
-    val canGesture: Boolean get() = runCatching {
-        (serviceInfo.capabilities and android.accessibilityservice.AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
-    }.getOrDefault(false)
 
     private fun scrollables(n: AccessibilityNodeInfo, out: MutableList<AccessibilityNodeInfo>, depth: Int = 0) {
         if (depth > 40) return

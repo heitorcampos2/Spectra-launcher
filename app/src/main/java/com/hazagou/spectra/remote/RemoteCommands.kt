@@ -101,6 +101,15 @@ object RemoteCommands {
         return if (ok) CommandResult(true, via = "foco") else CommandResult(false, AdbRemote.hint())
     }
 
+    /** Touchpad do celular: move o cursor no tablet. dx/dy chegam em dp do celular. */
+    fun move(ctx: Context, dx: Float, dy: Float): CommandResult {
+        val svc = HomeOverrideService.instance ?: return CommandResult(false, NEED_A11Y)
+        if (svc.isTv) return CommandResult(false, "Na TV use as setas.")
+        val k = ctx.resources.displayMetrics.density * 1.8f
+        return svc.cursorMove(dx * k, dy * k)?.let { CommandResult(true, via = it) }
+            ?: CommandResult(false, "Desligue e ligue de novo \"Spectra — Botão Home e controle\" em Acessibilidade no aparelho.")
+    }
+
     fun text(ctx: Context, text: String): CommandResult {
         val svc = HomeOverrideService.instance
         if (svc != null && svc.remoteText(text)) return CommandResult(true)
