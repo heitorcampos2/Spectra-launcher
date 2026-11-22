@@ -172,6 +172,21 @@ def channels(cfg, limit=30):
     return {"ok": True, "error": "", "rows": rows}
 
 
+def open_in_window(cfg, route):
+    """Pede ao Sintonia (3.1.34+) para abrir `route` na janela que já está aberta. True se alguma janela recebeu."""
+    base = (cfg.get("url") or "http://127.0.0.1:8787").rstrip("/")
+    host = urllib.parse.urlparse(base).hostname or ""
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        return False
+    try:
+        req = urllib.request.Request(base + "/api/ui/open", data=json.dumps({"route": route or ""}).encode(),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=4) as r:
+            return bool(json.loads(r.read().decode()).get("delivered"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def running(cfg):
     try:
         _get((cfg or {}).get("url") or "http://127.0.0.1:8787", "/api/state", (cfg or {}).get("password") or "", 2)

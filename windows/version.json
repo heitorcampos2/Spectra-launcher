@@ -1,12 +1,11 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "date": "2026-11-22",
   "notes": [
-    "Fundo do Spectra em Wallpaper e fundo: Wallpaper, Preto, Branco, Cinza claro, Preto OLED (ultra escuro), Cor personalizada ou Degradê. A cor das letras e dos painéis se ajusta sozinha ao fundo para dar leitura.",
-    "Vídeos do YouTube da fileira do Sintonia abrem na seção Canais do Sintonia (player com PiP, Curtir e sua conta) em vez do navegador."
+    "Clicar num item do Sintonia (Ver a seguir, canais, filmes, YouTube) abre na janela do Sintonia que já está aberta, sem abrir outra, e traz ela para a frente (precisa do Sintonia 3.1.35)."
   ],
   "files": {
-    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.5.zip"
+    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.6.zip"
   },
   "page": "https://github.com/heitorcampos2/Spectra-launcher/tree/main/windows"
 }

@@ -313,6 +313,10 @@ class App:
                 time.sleep(0.4)
                 if sintonia.running(cfg):
                     break
+        else:
+            # 1.0.5: o Sintonia já está aberto numa janela → abre o item nela (sem abrir outra janela)
+            if sintonia.open_in_window(cfg, route):
+                return "ok"
         open_app_window(f"{base}/{route.lstrip('/')}" if route else base, maximized=True)
         return "ok"
 

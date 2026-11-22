@@ -3,7 +3,14 @@ Desenvolvido por Heitor Campos (GitHub: heitorcampos2)
 ==========================================================
 
 PASTAS
-  Windows\   -> Spectra-Windows-1.0.5.zip  (PC com Windows 10 ou 11)
+  Windows\   -> Spectra-Windows-1.0.6.zip  (PC com Windows 10 ou 11)
+
+----------------------------------------------------------
+NOVIDADES DA 1.0.6
+----------------------------------------------------------
+- Clicar num item do Sintonia (Ver a seguir, canais, filmes, YouTube)
+  abre na janela do Sintonia que já está aberta, sem abrir outra, e
+  traz ela para a frente (precisa do Sintonia 3.1.35).
 
 ----------------------------------------------------------
 NOVIDADES DA 1.0.5
@@ -73,7 +80,7 @@ DA 1.0.0 (primeira versão para Windows)
 ----------------------------------------------------------
 INSTALAR
 ----------------------------------------------------------
-1. Extraia o Spectra-Windows-1.0.5.zip (botão direito > Extrair tudo).
+1. Extraia o Spectra-Windows-1.0.6.zip (botão direito > Extrair tudo).
 2. Dê dois cliques em "Instalar Spectra.bat".
    - Se aparecer "O Windows protegeu o computador": Mais informações
      > Executar assim mesmo.
