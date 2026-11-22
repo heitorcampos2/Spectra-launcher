@@ -280,26 +280,62 @@ function startFx(kind) {
   cv.width = innerWidth; cv.height = innerHeight;
   g.clearRect(0, 0, cv.width, cv.height);
   if (!kind || kind === 'none' || !S.settings.perf.animations) return;
-  const n = kind === 'snow' ? 120 : 60;
-  const ps = Array.from({ length: n }, () => ({ x: Math.random() * cv.width, y: Math.random() * cv.height,
-    r: kind === 'snow' ? 1 + Math.random() * 2.5 : 1 + Math.random() * 2, vx: (Math.random() - 0.5) * 0.3,
-    vy: kind === 'snow' ? 0.4 + Math.random() * 0.8 : -0.15 - Math.random() * 0.35, a: 0.25 + Math.random() * 0.55 }));
-  const step = () => {
-    g.clearRect(0, 0, cv.width, cv.height);
+  // 1.0.7: mesmos efeitos do Spectra do Android
+  const W = () => cv.width; const H = () => cv.height;
+  const n = { snow: 120, stars: 110, bokeh: 18, fireflies: 26, rain: 110 }[kind] || 60;
+  const R = Math.random;
+  const ps = Array.from({ length: n }, () => ({ x: R(), y: R(), r: 0.6 + R() * 2.2, sp: 0.2 + R() * 0.8, ph: R(), a: 0.25 + R() * 0.6 }));
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3b82f6';
+  const t0 = performance.now();
+  const TAU = Math.PI * 2;
+  const step = (now) => {
+    const t = ((now || performance.now()) - t0) / 90000;   // 0..1 a cada 90 s, como no Android
+    g.clearRect(0, 0, W(), H());
     for (const p of ps) {
-      p.x += p.vx; p.y += p.vy;
-      if (p.y > cv.height + 5) p.y = -5;
-      if (p.y < -5) p.y = cv.height + 5;
-      if (p.x < -5) p.x = cv.width + 5;
-      if (p.x > cv.width + 5) p.x = -5;
-      g.beginPath();
-      g.fillStyle = kind === 'snow' ? `rgba(255,255,255,${p.a})` : `rgba(255,255,255,${p.a * 0.8})`;
-      g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      g.fill();
+      if (kind === 'snow') {
+        const y = (((p.y + t * (4 + p.sp * 6)) % 1) + 1) % 1; const x = p.x + Math.sin((t * 18 + p.ph) * TAU) * 0.02;
+        g.fillStyle = `rgba(255,255,255,${0.35 + p.a * 0.5})`; g.beginPath(); g.arc(x * W(), y * H(), 1.2 + p.r, 0, TAU); g.fill();
+      } else if (kind === 'stars') {
+        let tw = 0.5 + 0.5 * Math.sin((t * (30 + p.sp * 40) + p.ph) * TAU); tw *= tw;
+        const cx = p.x * W(); const cy = p.y * H() * 0.8; const r = 0.5 + p.r * 0.6;
+        g.fillStyle = `rgba(255,255,255,${0.15 + 0.85 * tw * p.a})`; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
+        if (p.r > 2.2) {
+          const l = r * 5 * tw; g.strokeStyle = `rgba(255,255,255,${0.5 * tw})`; g.lineWidth = 1;
+          g.beginPath(); g.moveTo(cx - l, cy); g.lineTo(cx + l, cy); g.moveTo(cx, cy - l); g.lineTo(cx, cy + l); g.stroke();
+        }
+      } else if (kind === 'bokeh') {
+        const x = (p.x + Math.sin((t * 3 + p.ph) * TAU) * 0.05) * W(); const y = (p.y + Math.sin((t * 2 + p.ph * 2) * TAU) * 0.04) * H();
+        const r = 40 + p.r * 38; const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        const col = p.ph > 0.5 ? acc : '#ffffff';
+        gr.addColorStop(0, hexAlpha(col, 0.16 * p.a + 0.05)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+      } else if (kind === 'fireflies') {
+        const x = (p.x + Math.sin((t * (6 + p.sp * 4) + p.ph) * TAU) * 0.06) * W();
+        const y = (p.y * 0.6 + 0.35 + Math.sin((t * (5 + p.sp * 3) + p.ph * 3) * TAU) * 0.05) * H();
+        let gl = 0.5 + 0.5 * Math.sin((t * 50 + p.ph) * TAU); gl *= gl;
+        const gr = g.createRadialGradient(x, y, 0, x, y, 18);
+        gr.addColorStop(0, `rgba(230,255,122,${0.55 * gl})`); gr.addColorStop(1, 'rgba(230,255,122,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, 18, 0, TAU); g.fill();
+        g.fillStyle = `rgba(230,255,122,${0.9 * gl})`; g.beginPath(); g.arc(x, y, 1.8, 0, TAU); g.fill();
+      } else if (kind === 'rain') {
+        const y0 = ((((p.y + t * (60 + p.sp * 40)) % 1) + 1) % 1) * H(); const x0 = p.x * W(); const len = 16 + p.r * 9;
+        g.strokeStyle = `rgba(255,255,255,${0.12 + p.a * 0.25})`; g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 - len * 0.25, y0 + len); g.stroke();
+      } else {   // pontos de luz
+        const y = (((p.y - t * p.sp * 3) % 1) + 1) % 1; const x = p.x + Math.sin((t * 12 + p.ph) * TAU) * 0.01;
+        const tw = 0.6 + 0.4 * Math.sin((t * 40 + p.ph) * TAU);
+        g.fillStyle = `rgba(255,255,255,${p.a * tw})`; g.beginPath(); g.arc(x * W(), y * H(), p.r, 0, TAU); g.fill();
+      }
     }
     fxRaf = requestAnimationFrame(step);
   };
   step();
+}
+function hexAlpha(c, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(c.trim());
+  if (!m) return `rgba(255,255,255,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 let mouseShift = [0, 0];
 function parallax() {

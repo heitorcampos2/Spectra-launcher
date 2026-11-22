@@ -1,11 +1,13 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "date": "2026-11-22",
   "notes": [
-    "Clicar num item do Sintonia (Ver a seguir, canais, filmes, YouTube) abre na janela do Sintonia que já está aberta, sem abrir outra, e traz ela para a frente (precisa do Sintonia 3.1.35)."
+    "Biblioteca de wallpapers igual à do Android (Menu › Biblioteca de wallpapers): Categorias em 9 grupos com 70 temas, Classificação (top da semana/mês/ano, mais favoritados, mais vistos, recentes, surpresa; Full HD, 2K ou 4K), Buscar e Meus wallpapers, com prévia e Aplicar em alta qualidade.",
+    "Efeitos por cima da imagem iguais aos do Android: Pontos de luz, Neve, Estrelas cintilantes, Bokeh, Vaga-lumes e Chuva.",
+    "O Sintonia aberto pelo Spectra usa o mesmo endereço do atalho do Sintonia, então o Continuar assistindo e as preferências são os mesmos."
   ],
   "files": {
-    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.6.zip"
+    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.7.zip"
   },
   "page": "https://github.com/heitorcampos2/Spectra-launcher/tree/main/windows"
 }

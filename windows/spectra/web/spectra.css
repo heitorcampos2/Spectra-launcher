@@ -252,3 +252,39 @@ body.idle-on #home { opacity: 0; transition: opacity .8s; }
 :root[data-bgl="light"] .card .letter { color: #fff; }
 :root[data-bgk="oled"] { --pane: rgba(0, 0, 0, .98); --pane-2: rgba(10, 10, 10, .98); --pane-3: rgba(20, 20, 20, .98); --card: rgba(255, 255, 255, .05); }
 :root[data-bgl] #shade { display: none; }
+
+/* ---------- 1.0.7: biblioteca de wallpapers (tela cheia, igual ao Android) ---------- */
+.modal.wl-modal { width: min(1500px, 96vw); max-width: none; height: 92vh; max-height: none; padding: 0; display: flex; flex-direction: column; }
+.wl-modal .modal-body { flex: 1; min-height: 0; padding: 0; overflow: hidden; display: flex; }
+.wl { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.wl-filters, .wl-row, .wl-scroll { min-width: 0; }
+.wl-head { display: flex; align-items: center; gap: 16px; padding: 20px 26px 8px; flex-wrap: wrap; }
+.wl-head h2 { margin: 0; font: 800 28px var(--font-display); color: var(--text); }
+.wl-tabs { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+.wl-filters { padding: 0 26px 6px; display: flex; flex-direction: column; gap: 8px; }
+.wl-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: thin; align-items: center; }
+.wl-row .input { flex: 1; min-width: 220px; height: 46px; }
+.wl-pill { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line-2);
+  background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.wl-pill:hover { border-color: var(--accent); }
+.wl-pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wl-pill:focus-visible, .wl-pill.f-ring { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wl-em { font-size: 15px; }
+.wl-sep { flex: none; width: 14px; }
+.wl-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 26px 26px; }
+.wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.wl-item { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer;
+  background: var(--surface-3); transition: transform .15s var(--ease), border-color .15s; }
+.wl-item img, .wl-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wl-item:hover, .wl-item:focus-visible, .wl-item.f-ring { transform: scale(1.04); border-color: var(--accent); outline: 0; z-index: 1; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+.wl-item.on { border-color: var(--accent); }
+.wl-res { position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 2px 8px; border-radius: 8px; background: rgba(0, 0, 0, .62); color: #fff;
+  font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-more { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 20px 0 6px; flex-wrap: wrap; }
+.wl-hint { color: var(--text-2); text-align: center; margin: 10px 0; }
+.modal.wl-prev-modal { width: min(1300px, 94vw); max-width: none; padding: 0; overflow: hidden; }
+.wl-prev-modal .modal-body { padding: 0; }
+.wl-prev { display: flex; flex-direction: column; }
+.wl-full { width: 100%; max-height: 76vh; object-fit: contain; background: #000; display: block; }
+.wl-prev-bar { display: flex; align-items: center; gap: 10px; padding: 14px 18px; }
+.wl-prev-bar span { flex: 1; color: var(--text-2); font-weight: 600; }

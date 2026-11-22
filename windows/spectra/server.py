@@ -317,7 +317,9 @@ class App:
             # 1.0.5: o Sintonia já está aberto numa janela → abre o item nela (sem abrir outra janela)
             if sintonia.open_in_window(cfg, route):
                 return "ok"
-        open_app_window(f"{base}/{route.lstrip('/')}" if route else base, maximized=True)
+        # mesma origem da janela aberta pelo atalho do Sintonia (localhost): mesmo "continuar assistindo" e preferências
+        wbase = base.replace("://127.0.0.1:", "://localhost:")
+        open_app_window(f"{wbase}/{route.lstrip('/')}" if route else wbase, maximized=True)
         return "ok"
 
     # --- sistema ---------------------------------------------------------------
@@ -604,6 +606,58 @@ def r_sintonia_install(app, h, m, q, body):
 @route("GET", r"/api/system")
 def r_system(app, h, m, q, body):
     return app.system()
+
+
+# ---- 1.0.7: biblioteca de wallpapers (acervo público Wallhaven, só conteúdo seguro, proporção de tela)
+_wh_cache = {}
+
+
+@route("GET", r"/api/wallhaven")
+def r_wallhaven(app, h, m, q, body):
+    qs = {"categories": "111", "purity": "100", "ratios": "16x9,16x10,21x9"}
+    sorting = q.get("sorting") or "relevance"
+    if sorting not in ("relevance", "toplist", "favorites", "views", "date_added", "random"):
+        sorting = "relevance"
+    qs["sorting"] = sorting
+    qs["order"] = "desc"
+    if sorting == "toplist":
+        tr = q.get("topRange") or "1M"
+        qs["topRange"] = tr if tr in ("1d", "3d", "1w", "1M", "3M", "6M", "1y") else "1M"
+    if sorting == "random":
+        qs["seed"] = re.sub(r"[^A-Za-z0-9]", "", q.get("seed") or "")[:6] or uuid.uuid4().hex[:6]
+    at = q.get("atleast") or "1920x1080"
+    qs["atleast"] = at if at in ("1920x1080", "2560x1440", "3840x2160") else "1920x1080"
+    term = (q.get("q") or "").strip()[:80]
+    if term:
+        qs["q"] = term
+    try:
+        qs["page"] = str(max(1, min(50, int(q.get("page") or 1))))
+    except ValueError:
+        qs["page"] = "1"
+    url = "https://wallhaven.cc/api/v1/search?" + urllib.parse.urlencode(qs)
+    hit = _wh_cache.get(url)
+    if hit and time.time() - hit[0] < 600 and sorting != "random":
+        return hit[1]
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Spectra", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.loads(r.read(4 * 1024 * 1024).decode("utf-8", "replace"))
+    except Exception as exc:  # noqa: BLE001
+        raise ApiError(f"Não consegui falar com o acervo de wallpapers ({exc})", 502) from exc
+    items = []
+    for o in data.get("data") or []:
+        full = o.get("path") or ""
+        thumb = (o.get("thumbs") or {}).get("large") or ""
+        if not (full.startswith("https://w.wallhaven.cc/") and thumb.startswith("https://th.wallhaven.cc/")):
+            continue
+        items.append({"id": "wh_" + str(o.get("id")), "thumb": thumb, "full": full,
+                      "w": o.get("dimension_x"), "h": o.get("dimension_y"), "colors": (o.get("colors") or [])[:3]})
+    meta = data.get("meta") or {}
+    out = {"items": items, "more": int(meta.get("current_page") or 1) < int(meta.get("last_page") or 1)}
+    if len(_wh_cache) > 200:
+        _wh_cache.clear()
+    _wh_cache[url] = (time.time(), out)
+    return out
 
 
 @route("GET", r"/api/wallpapers")

@@ -3,19 +3,24 @@
 Desenvolvedor: **Heitor Campos** ([@heitorcampos2](https://github.com/heitorcampos2))
 
 <p align="center">
-  <a href="https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.6.zip">
-    <img alt="Baixar para Windows" src="https://img.shields.io/badge/⬇%20Baixar-Windows%20v1.0.6-0078D6?style=for-the-badge&logo=windows&logoColor=white" height="56">
+  <a href="https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.7.zip">
+    <img alt="Baixar para Windows" src="https://img.shields.io/badge/⬇%20Baixar-Windows%20v1.0.7-0078D6?style=for-the-badge&logo=windows&logoColor=white" height="56">
   </a>
 </p>
 
 A tela inicial do **Spectra Launcher** (Android TV), agora no PC, com o visual do Sintonia: seus apps do Windows, os apps instalados pelo Chrome/Edge e os canais do **Sintonia** em fileiras.
 
 ## Instalar
-1. Baixe o `Spectra-Windows-1.0.6.zip` e extraia (botão direito › Extrair tudo).
+1. Baixe o `Spectra-Windows-1.0.7.zip` e extraia (botão direito › Extrair tudo).
 2. Dê dois cliques em **Instalar Spectra.bat** (se faltar o Python, o instalador instala sozinho).
 3. O Spectra abre em janela própria. Ícone na Área de Trabalho e no Menu Iniciar.
 
 Depois, atualize pelo próprio Spectra: **Configurações › Atualizações › Atualizar agora**.
+
+## Novidades da 1.0.7
+- Biblioteca de wallpapers igual à do Android (Menu › Biblioteca de wallpapers): Categorias em 9 grupos com 70 temas, Classificação (top da semana/mês/ano, mais favoritados, mais vistos, recentes, surpresa; Full HD, 2K ou 4K), Buscar e Meus wallpapers, com prévia e Aplicar em alta qualidade.
+- Efeitos por cima da imagem iguais aos do Android: Pontos de luz, Neve, Estrelas cintilantes, Bokeh, Vaga-lumes e Chuva.
+- O Sintonia aberto pelo Spectra usa o mesmo endereço do atalho do Sintonia, então o Continuar assistindo e as preferências são os mesmos.
 
 ## Novidades da 1.0.6
 - Clicar num item do Sintonia (Ver a seguir, canais, filmes, YouTube) abre na janela do Sintonia que já está aberta, sem abrir outra, e traz ela para a frente (precisa do Sintonia 3.1.35).

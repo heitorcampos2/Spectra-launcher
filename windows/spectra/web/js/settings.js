@@ -1,5 +1,6 @@
 // Painel MENU, configurações (com prévia ao vivo), editores de seções e canais, adicionar apps
 import { api } from './api.js';
+import { openWallLibrary } from './wallib.js';
 import { btn, clear, closeTopModal, confirmBox, h, ic, menu, modal, promptBox, toast, toggle } from './ui.js';
 import {
   CH, KIND_LABEL, S, appIcon, applyLook, applyWall, homeOrder, hue, launch, loadApps, openSintonia, reloadAll, render,
@@ -79,6 +80,7 @@ export function openPanel() {
     item('☰', 'Editar seções', 'Criar, ordenar e personalizar', () => openSettings('sections')),
     item('📺', 'Editar canais', 'Ver a seguir e canais do Sintonia', () => openSettings('channels')),
     item('🖼️', 'Wallpaper e fundo', null, () => openSettings('wall')),
+    item('🏞️', 'Biblioteca de wallpapers', 'Categorias, top e busca', () => openWallLibrary()),
     item('🎨', 'Cores e tema', null, () => openSettings('colors')),
     item('⚙️', 'Configurações', null, () => openSettings()),
     el('div.p-sep'),
@@ -331,6 +333,8 @@ const PAGES = {
     });
     const urlIn = el('input.input', { placeholder: 'Endereço de uma imagem (https://…)' });
     m.append(
+      group('Biblioteca de wallpapers',
+        actionRow('Abrir a biblioteca', 'Categorias, Classificação (top da semana, do mês, 4K…) e busca, como no Spectra do Android', () => openWallLibrary(() => drawWalls()), 'chevR')),
       group('Escolher wallpaper', grid,
         el('div.inline-form', btn('Imagem ou vídeo do PC…', { cls: 'primary sm', icon: 'upload', onclick: () => file.click() }),
           btn('Procurar no Google Imagens', { cls: 'ghost sm', icon: 'external', onclick: () => api.post('/api/open-url', { url: 'https://www.google.com/search?tbm=isch&tbs=isz:l&q=wallpaper+4k+paisagem' }) })),
@@ -350,7 +354,8 @@ const PAGES = {
       group('Movimento e efeitos',
         seg('Movimento', 'wall.motion', [['none', 'Parado'], ['parallax', 'Parallax'], ['pan', 'Movimento suave']]),
         stepper('Intensidade do parallax', 'wall.parallax', 0, 100, 5, '%'),
-        seg('Efeito por cima da imagem', 'wall.effect', [['none', 'Nenhum'], ['particles', 'Partículas'], ['snow', 'Neve']]),
+        seg('Efeito por cima da imagem', 'wall.effect', [['none', 'Nenhum'], ['particles', 'Pontos de luz'], ['snow', 'Neve'], ['stars', 'Estrelas cintilantes'],
+          ['bokeh', 'Bokeh'], ['fireflies', 'Vaga-lumes'], ['rain', 'Chuva']]),
         stepper('Escurecimento', 'wall.dim', 0, 85, 5, '%'),
         toggleRow('Desfoque suave', 'wall.blur'),
         seg('Trocar a cada', 'wall.rotateMin', [[0, 'Nunca'], [5, '5 min'], [15, '15 min'], [30, '30 min'], [60, '1 h']], 'Alterna entre as imagens da lista')));

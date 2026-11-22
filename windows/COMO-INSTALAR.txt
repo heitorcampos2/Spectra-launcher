@@ -3,7 +3,21 @@ Desenvolvido por Heitor Campos (GitHub: heitorcampos2)
 ==========================================================
 
 PASTAS
-  Windows\   -> Spectra-Windows-1.0.6.zip  (PC com Windows 10 ou 11)
+  Windows\   -> Spectra-Windows-1.0.7.zip  (PC com Windows 10 ou 11)
+
+----------------------------------------------------------
+NOVIDADES DA 1.0.7
+----------------------------------------------------------
+- Biblioteca de wallpapers igual à do Android (Menu › Biblioteca de
+  wallpapers): Categorias em 9 grupos com 70 temas, Classificação (top
+  da semana/mês/ano, mais favoritados, mais vistos, recentes,
+  surpresa; Full HD, 2K ou 4K), Buscar e Meus wallpapers, com prévia e
+  Aplicar em alta qualidade.
+- Efeitos por cima da imagem iguais aos do Android: Pontos de luz,
+  Neve, Estrelas cintilantes, Bokeh, Vaga-lumes e Chuva.
+- O Sintonia aberto pelo Spectra usa o mesmo endereço do atalho do
+  Sintonia, então o Continuar assistindo e as preferências são os
+  mesmos.
 
 ----------------------------------------------------------
 NOVIDADES DA 1.0.6
@@ -80,7 +94,7 @@ DA 1.0.0 (primeira versão para Windows)
 ----------------------------------------------------------
 INSTALAR
 ----------------------------------------------------------
-1. Extraia o Spectra-Windows-1.0.6.zip (botão direito > Extrair tudo).
+1. Extraia o Spectra-Windows-1.0.7.zip (botão direito > Extrair tudo).
 2. Dê dois cliques em "Instalar Spectra.bat".
    - Se aparecer "O Windows protegeu o computador": Mais informações
      > Executar assim mesmo.
