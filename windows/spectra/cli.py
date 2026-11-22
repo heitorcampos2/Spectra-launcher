@@ -104,6 +104,14 @@ def main(argv=None):
     elif a.abrir:
         threading.Timer(0.6, lambda: __import__("webbrowser").open(url)).start()
 
+    # Windows: ícone e "fixar na barra" do Spectra (não do Chrome) e atalhos com a mesma identidade
+    try:
+        from . import wintaskbar
+        _ico = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "spectra.ico")
+        wintaskbar.start("HeitorCampos.Spectra", "Spectra", "Spectra.lnk", "-m spectra --janela", _ico)
+    except Exception:  # noqa: BLE001
+        pass
+
     def _term(*_):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, _term)
