@@ -1,0 +1,6 @@
+      android.permission.READ_TV_LISTINGS
+      android.permission.READ_TV_LISTINGS
+        android.permission.READ_TV_LISTINGS: granted=false, flags=[ USER_SET]
+11-22 02:53:58.838  5047  5074 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✕ negada — toque em "Liberar canais dos apps", channelRows=0, channelApps=[], previewRows=0, watchNextRows=0, error=null)
+11-22 02:54:01.749  5047  5080 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✕ negada — toque em "Liberar canais dos apps", channelRows=0, channelApps=[], previewRows=0, watchNextRows=0, error=null)
+11-22 02:54:13.859  5047  5080 I SpectraTv: diagnóstico: Diagnostics(provider=true, readEpg=true, readListings=✕ negada — toque em "Liberar canais dos apps", channelRows=0, channelApps=[], previewRows=0, watchNextRows=0, error=null)
