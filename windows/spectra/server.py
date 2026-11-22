@@ -583,7 +583,7 @@ def r_channels(app, h, m, q, body):
 @route("POST", r"/api/sintonia/open")
 def r_sintonia_open(app, h, m, q, body):
     route_ = body.get("route") or ""
-    if route_ and not re.match(r"^(#/[\w/%.\-]*|\?[\w=&%.+\-]*)$", route_):
+    if route_ and not re.match(r"^(#/[\w/%.\-]*|\?[\w=&%.+~\-]*)$", route_):
         raise ApiError("Endereço inválido")
     return {"ok": True, "message": app.open_sintonia(route_)}
 

@@ -154,7 +154,7 @@ export function applyLook() {
   root.style.setProperty('--dim', String(1 - s.layout.dimOthers / 100));
   root.style.setProperty('--fsz', String((s.font.size || 100) / 100));
   root.style.setProperty('--font-ui', `'${s.font.family}', 'Figtree', 'Segoe UI', system-ui, sans-serif`);
-  root.style.setProperty('--title-c', s.profile.titleColor || '#fff');
+  if (s.profile.titleColor) root.style.setProperty('--title-c', s.profile.titleColor); else root.style.removeProperty('--title-c');
   root.style.setProperty('--tsz', `${s.profile.titleSize}px`);
   document.body.classList.toggle('bold', !!s.font.bold);
   document.body.classList.toggle('italic', !!s.font.italic);
@@ -189,6 +189,17 @@ export function hue(text) {
 let autoAccent = '';
 let wallKey = '';
 let rotateT = null;
+const BG_PRESET = { preto: '#141518', branco: '#ffffff', cinza: '#d9dde3', oled: '#000000' };
+function lum(hex) {
+  const n = parseInt(String(hex || '#000').replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+  const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+}
+function mixHex(a, b) {
+  const x = parseInt(String(a || '#000').replace('#', ''), 16); const y = parseInt(String(b || '#000').replace('#', ''), 16);
+  const m = (s) => Math.round((((x >> s) & 255) + ((y >> s) & 255)) / 2);
+  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, '0')}`;
+}
 export function applyWall(force) {
   const w = S.settings.wall;
   const bg = document.getElementById('bg');
@@ -199,7 +210,7 @@ export function applyWall(force) {
   if (key !== wallKey || force) {
     wallKey = key;
     clear(bg);
-    bg.style.background = w.type === 'gradient' ? `linear-gradient(135deg, ${w.color1}, ${w.color2})` : w.type === 'color' ? w.color1 : '#0b1220';
+    bg.style.background = w.type === 'gradient' ? `linear-gradient(135deg, ${w.color1}, ${w.color2})` : w.type === 'color' ? w.color1 : (BG_PRESET[w.type] || '#0b1220');
     if (w.type === 'image') {
       const info = S.walls.find((x) => x.id === w.image);
       const url = `/api/wallpaper/${encodeURIComponent(w.image || 'paisagem')}`;
@@ -213,8 +224,22 @@ export function applyWall(force) {
       bg.append(el);
     }
   }
+  // cor da fonte/painéis acompanha o fundo (fundo claro → texto escuro)
+  const solid = w.type === 'color' ? w.color1 : w.type === 'gradient' ? mixHex(w.color1, w.color2) : BG_PRESET[w.type];
+  const root = document.documentElement;
+  if (solid) {
+    const L = lum(solid);
+    root.dataset.bgl = L > 0.45 ? 'light' : 'dark';
+    root.dataset.bgk = w.type;
+    root.style.setProperty('--on-bg', L > 0.45 ? '#11151c' : '#ffffff');
+    root.style.setProperty('--shade', '0');
+    root.style.setProperty('--shade-top', '0');
+  } else {
+    delete root.dataset.bgl; delete root.dataset.bgk;
+    root.style.removeProperty('--on-bg'); root.style.removeProperty('--shade-top');
+  }
   clearInterval(rotateT);
-  if (w.rotateMin > 0) {
+  if (w.rotateMin > 0 && w.type === 'image') {
     rotateT = setInterval(async () => {
       const imgs = S.walls.filter((x) => x.type === 'image');
       if (imgs.length < 2) return;

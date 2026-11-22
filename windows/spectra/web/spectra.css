@@ -238,3 +238,17 @@ body.idle-on #home { opacity: 0; transition: opacity .8s; }
 .settings .set-row { flex-wrap: wrap; row-gap: 10px; }
 .settings .set-txt { min-width: 150px; }
 .settings .set-row > .seg, .settings .set-row > .stepper { margin-left: auto; }
+
+/* ---------- fundo sólido: letras e painéis acompanham o fundo ---------- */
+:root[data-bgl] .row-head, :root[data-bgl] .row-info, :root[data-bgl] .row-empty, :root[data-bgl] .card, :root[data-bgl] .st-clock,
+:root[data-bgl] .st-btn, :root[data-bgl] .rail-i, :root[data-bgl] .rail-tools button, :root[data-bgl] .menu-btn,
+:root[data-bgl] .idle b, :root[data-bgl] .idle small, :root[data-bgl] .demo-flag, :root[data-bgl] .hint-bar { color: var(--on-bg); text-shadow: none; }
+:root[data-bgl] .card .name, :root[data-bgl] .card.media small, :root[data-bgl] .home-title { text-shadow: none; }
+:root[data-bgl="light"] { --title-c: #11151c; --card: rgba(0, 0, 0, .06); --card-line: rgba(0, 0, 0, .12);
+  --pane: rgba(255, 255, 255, .96); --pane-2: rgba(240, 242, 246, .97); --pane-3: rgba(226, 230, 237, .98);
+  --surface: #ffffff; --surface-2: #eef1f6; --surface-3: #e3e8f0; --bg: #f3f5f9; --side: #ffffff;
+  --line: rgba(0, 0, 0, .10); --line-2: rgba(0, 0, 0, .16); --text: #121722; --text-2: #3f4859; --muted: #5d6678; }
+:root[data-bgl="light"] .st-btn, :root[data-bgl="light"] .rail-tools button, :root[data-bgl="light"] .row-head .cfg { background: rgba(0, 0, 0, .07); color: #11151c; }
+:root[data-bgl="light"] .card .letter { color: #fff; }
+:root[data-bgk="oled"] { --pane: rgba(0, 0, 0, .98); --pane-2: rgba(10, 10, 10, .98); --pane-3: rgba(20, 20, 20, .98); --card: rgba(255, 255, 255, .05); }
+:root[data-bgl] #shade { display: none; }

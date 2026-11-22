@@ -343,8 +343,10 @@ const PAGES = {
           } catch (e) { toast(e.message, { type: 'error' }); }
         } })), file),
       group('Fundo',
-        seg('Tipo de fundo', 'wall.type', [['image', 'Imagem/vídeo'], ['color', 'Cor sólida'], ['gradient', 'Degradê']]),
-        colorRow('Cor de fundo 1', 'wall.color1'), colorRow('Cor de fundo 2 (degradê)', 'wall.color2')),
+        seg('Fundo do Spectra', 'wall.type', [['image', 'Wallpaper'], ['preto', 'Preto'], ['branco', 'Branco'], ['cinza', 'Cinza claro'],
+          ['oled', 'Preto OLED'], ['color', 'Cor personalizada'], ['gradient', 'Degradê']],
+          'A cor das letras e dos painéis se ajusta sozinha ao fundo para dar leitura.'),
+        colorRow('Cor personalizada / cor 1 do degradê', 'wall.color1'), colorRow('Cor 2 do degradê', 'wall.color2')),
       group('Movimento e efeitos',
         seg('Movimento', 'wall.motion', [['none', 'Parado'], ['parallax', 'Parallax'], ['pan', 'Movimento suave']]),
         stepper('Intensidade do parallax', 'wall.parallax', 0, 100, 5, '%'),

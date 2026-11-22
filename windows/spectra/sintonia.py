@@ -84,7 +84,9 @@ def youtube_rows(cfg, limit=30):
             continue
         out[row["id"]] = [{"key": "yt" + it["yt"], "title": it.get("title", ""), "desc": it.get("subtitle", ""),
                            "img": it.get("img", ""), "wide": True, "app": "YouTube",
-                           "url": "https://www.youtube.com/watch?v=" + it["yt"]} for it in (row.get("items") or [])[:limit] if it.get("yt")]
+                           # abre na seção Canais do Sintonia (player do YouTube com conta e extensões do Chrome)
+                           "open": _link({"a": "yt", "v": it["yt"], "t": it.get("title", "")[:120]})}
+                          for it in (row.get("items") or [])[:limit] if it.get("yt")]
     return out
 
 
