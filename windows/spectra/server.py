@@ -766,6 +766,11 @@ class Handler(BaseHTTPRequestHandler):
         if not self._local_only():
             self.send_json({"error": "Acesso só por este computador"}, 403)
             return
+        # contra "DNS rebinding": um site com domínio próprio apontando para 127.0.0.1 não passa daqui
+        host = (self.headers.get("Host") or "127.0.0.1").rsplit(":", 1)[0].strip("[]").lower()
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            self.send_json({"error": "Endereço não permitido"}, 403)
+            return
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
         q = {k: v[-1] for k, v in urllib.parse.parse_qs(parsed.query).items()}

@@ -1,12 +1,11 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "date": "2026-11-21",
   "notes": [
-    "Ícone próprio na barra de tarefas: \"Fixar na barra de tarefas\" fixa o Spectra (antes ficava agrupado no Chrome)",
-    "Ícone mais nítido na barra de tarefas, no Menu Iniciar e na Área de Trabalho (tamanhos para todas as escalas de tela)"
+    "Segurança reforçada: sites abertos no navegador não conseguem ler a sua lista de apps nem mandar comandos para o Spectra"
   ],
   "files": {
-    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.3.zip"
+    "windows": "https://github.com/heitorcampos2/Spectra-launcher/raw/main/windows/downloads/Spectra-Windows-1.0.4.zip"
   },
   "page": "https://github.com/heitorcampos2/Spectra-launcher/tree/main/windows"
 }
